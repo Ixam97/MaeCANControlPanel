@@ -1,0 +1,109 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="sources">
+      <UniqueIdentifier>{ba3ee4b2-f95f-4dcd-8fc6-ba26e7231391}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="headers">
+      <UniqueIdentifier>{199b0e39-16fb-40f7-bb9b-3ee18db636b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ImGuiDocking">
+      <UniqueIdentifier>{3e9d9372-a1a3-4be3-ab46-b44394a5349b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resources">
+      <UniqueIdentifier>{1f912e44-2ddc-4880-93db-418e6365177e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gui.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="include\ImGuiDocking\imgui.cpp">
+      <Filter>ImGuiDocking</Filter>
+    </ClCompile>
+    <ClCompile Include="include\ImGuiDocking\imgui_demo.cpp">
+      <Filter>ImGuiDocking</Filter>
+    </ClCompile>
+    <ClCompile Include="include\ImGuiDocking\imgui_draw.cpp">
+      <Filter>ImGuiDocking</Filter>
+    </ClCompile>
+    <ClCompile Include="include\ImGuiDocking\imgui_impl_sdl.cpp">
+      <Filter>ImGuiDocking</Filter>
+    </ClCompile>
+    <ClCompile Include="include\ImGuiDocking\imgui_impl_sdlrenderer.cpp">
+      <Filter>ImGuiDocking</Filter>
+    </ClCompile>
+    <ClCompile Include="include\ImGuiDocking\imgui_tables.cpp">
+      <Filter>ImGuiDocking</Filter>
+    </ClCompile>
+    <ClCompile Include="include\ImGuiDocking\imgui_widgets.cpp">
+      <Filter>ImGuiDocking</Filter>
+    </ClCompile>
+    <ClCompile Include="src\can.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\globals.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\gui.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\globals.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ini.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImGuiDocking\imconfig.h">
+      <Filter>ImGuiDocking</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImGuiDocking\imgui.h">
+      <Filter>ImGuiDocking</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImGuiDocking\imgui_impl_sdl.h">
+      <Filter>ImGuiDocking</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImGuiDocking\imgui_impl_sdlrenderer.h">
+      <Filter>ImGuiDocking</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImGuiDocking\imgui_internal.h">
+      <Filter>ImGuiDocking</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImGuiDocking\imstb_rectpack.h">
+      <Filter>ImGuiDocking</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImGuiDocking\imstb_textedit.h">
+      <Filter>ImGuiDocking</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImGuiDocking\imstb_truetype.h">
+      <Filter>ImGuiDocking</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>resources</Filter>
+    </ClInclude>
+    <ClInclude Include="src\can.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\candefs.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\consoledecoder.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="icon.ico">
+      <Filter>resources</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="resource.rc">
+      <Filter>resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>
