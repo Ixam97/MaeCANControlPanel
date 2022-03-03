@@ -1,20 +1,37 @@
+/*
+ * ----------------------------------------------------------------------------
+ * "THE BEER-WARE LICENSE" (Revision 42):
+ * <ixam97@ixam97> wrote this file. As long as you retain this notice you
+ * can do whatever you want with this stuff. If we meet some day, and you think
+ * this stuff is worth it, you can buy me a beer in return.
+ *
+ * ----------------------------------------------------------------------------
+ * https://github.com/Ixam97
+ * ----------------------------------------------------------------------------
+ * MäCAN Control Panel
+ * gui.cpp
+ * (c)2022 Maximilian Goldschmidt
+ */
+
 #include "gui.h"
-#include "consoledecoder.h"
 
 #if !SDL_VERSION_ATLEAST(2,0,17)
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
 #endif
-GUI::GUI() {}
 
-GUI::GUI(int x_res, int y_res, const char* window_name, CAN* _can, float scaling) {
+GUI::GUI(int x_res, int y_res, const char* window_name) {
+
+    SetProcessDPIAware();
+    m_scaling = (float)GetDeviceCaps(GetDC(NULL), LOGPIXELSX) / 96;
+
+
     m_x_res = x_res;
     m_y_res = y_res;
 
-    m_can = _can;
+    // m_can = _can;
 
     // Init everything for the UI
 
-    m_scaling = scaling;
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
     {
@@ -52,14 +69,7 @@ GUI::GUI(int x_res, int y_res, const char* window_name, CAN* _can, float scaling
     ImGui_ImplSDLRenderer_Init(m_renderer);
 
     m_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\seguisym.ttf", floor(18.0f * m_scaling));
-    m_consolas = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\consola.ttf", floor(14.0 * m_scaling));
-}
-
-void GUI::setScaling(float _scaling)
-{
-    m_scaling = _scaling; 
-    m_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\seguisym.ttf", floor(18.0f * m_scaling));
-    m_consolas = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\consola.ttf", floor(14.0 * m_scaling));
+    m_consolas = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\consola.ttf", floor(14.0f * m_scaling));
 }
 
 void GUI::poll(bool* _exit)
@@ -80,11 +90,10 @@ void GUI::poll(bool* _exit)
         {
             uint8_t stopData[] = { 0,0,0,0,0,0,0,0 };
             canFrame stopFrame(0x00000300, 5, stopData);
-            m_can->addFrameToQueue(stopFrame, OUTQUEUE);
+            addFrameToQueue(stopFrame);
         }
         *_exit = true;
-    }
-        
+    }   
 }
 
 void GUI::newFrame()
@@ -143,7 +152,7 @@ void GUI::drawMainWindow() {
 
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("Datei")) {
-                ImGui::MenuItem("Einstellungen", NULL, &m_draw_settings);
+                if (ImGui::MenuItem("Einstellungen")) m_draw_settings = true;
                 ImGui::Separator();
                 ImGui::MenuItem("Beenden", "Alt+F4", &m_exit);
                 ImGui::EndMenu();
@@ -157,7 +166,7 @@ void GUI::drawMainWindow() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Hilfe")) {
-                ImGui::MenuItem("Über MäCAN Control Panel");
+                if (ImGui::MenuItem("Über MäCAN Control Panel")) m_draw_info = true;
                 ImGui::EndMenu();
             }
             ImGui::EndMenuBar();
@@ -232,13 +241,13 @@ void GUI::drawMainWindow() {
             }
         }
         
-        if (!global_states.track_power && global_states.tcp_success) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0, 0.0, 0.0, 1.0));
-        if (ImGui::SmallButton("STOP") && global_states.tcp_success) m_can->addFrameToQueue(m_stopFrame, OUTQUEUE);
+        if (!global_states.track_power && global_states.tcp_success) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+        if (ImGui::SmallButton("STOP") && global_states.tcp_success) addFrameToQueue(m_stopFrame);
         if (!global_states.track_power && global_states.tcp_success) ImGui::PopStyleColor();
         ImGui::SameLine();
 
-        if (global_states.track_power && global_states.tcp_success) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0, 0.6, 0.1, 1.0));
-        if (ImGui::SmallButton("GO") && global_states.tcp_success) m_can->addFrameToQueue(m_goFrame, OUTQUEUE);
+        if (global_states.track_power && global_states.tcp_success) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.00f, 0.60f, 0.10f, 1.00f));
+        if (ImGui::SmallButton("GO") && global_states.tcp_success) addFrameToQueue(m_goFrame);
         if (global_states.track_power && global_states.tcp_success) ImGui::PopStyleColor();
    
     }
@@ -249,6 +258,7 @@ void GUI::drawMainWindow() {
     if (m_draw_settings) drawSettings();
     if (m_draw_consoles) drawConsoles();
     if (m_draw_device_manager) drawDeviceManager(); 
+    if (m_draw_info) drawInfo();
 #ifdef _DEBUG
     // if (m_draw_debug_monitor) ImGui::ShowMetricsWindow(&m_draw_debug_monitor);
     if (m_draw_debug_monitor) drawDebugMonitor();
@@ -258,7 +268,7 @@ void GUI::drawMainWindow() {
 void GUI::drawSettings()
 {
     //Settings Window
-    if (!ImGui::Begin("Einstellungen", &m_draw_settings, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking)) {
+    if (!ImGui::Begin("Einstellungen", &m_draw_settings, DialogWindowFlag)) {
 
         ImGui::End();
         return;
@@ -320,12 +330,23 @@ void GUI::drawConsoles()
         return;
     }
     static bool AutoScroll = true;
-    static bool JumpToBottom = false;
     static bool EasyMode = false;
+    static int max_console_lines = 200;
+
+    static bool JumpToBottom = false;
     static size_t vector_size = 0;
     bool copy_to_clipboard = false;
     static int cmd_filter = 0;
     static bool b_cmd_filter = false;
+
+    while (m_consoleVector.size() > max_console_lines)
+    {
+        for (size_t i = 0; i < m_consoleVector.size() - 1; i++)
+        {
+            m_consoleVector[i] = m_consoleVector[i + 1];
+        }
+        m_consoleVector.pop_back();
+    }
     
     if (vector_size != m_consoleVector.size()) {
         vector_size = m_consoleVector.size();
@@ -335,6 +356,8 @@ void GUI::drawConsoles()
     if (ImGui::BeginPopup("Optionen")) {
         ImGui::Checkbox("Automatisches Scrollen", &AutoScroll);
         ImGui::Checkbox("Vereinfachter Modus", &EasyMode);
+        ImGui::InputInt("Max. Zeilen", &max_console_lines, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue);
+        if (max_console_lines < 0) max_console_lines = 0;
         
         ImGui::EndPopup();
     }
@@ -394,7 +417,7 @@ void GUI::drawDeviceManager()
         return;
     }
 
-    if (ImGui::Button("Ping")) m_can->addFrameToQueue(newCanFrame(CMD_PING, 0), OUTQUEUE);
+    if (ImGui::Button("Ping")) addFrameToQueue(newCanFrame(CMD_PING, 0));
     ImGui::SameLine();
     if (ImGui::Button("Liste zurücksetzen"))
     {
@@ -498,8 +521,37 @@ void GUI::drawDebugMonitor() {
     ImGui::Text("Lists:");
     ImGui::Text("Device list size: %d", device_list.size());
     ImGui::Text("Readings request list size: %d", readings_request_list.size());
+    ImGui::Text("CAN monitor lines: %d", m_consoleVector.size());
 
     ImGui::End();
+}
+
+void GUI::drawInfo()
+{
+    if (ImGui::Begin("Über MäCAN Control Panel", &m_draw_info, DialogWindowFlag)) {
+        ImGui::Text("MäCAN Control Panel");
+        ImGui::Text("Version: %s", VERSION);
+        ImGui::Text("© 2022 Maximilian Goldschmidt");
+        ImGui::Text("https://github.com/ixam97, ixam97@ixam97.de");
+    }
+    ImGui::End();
+    
+}
+
+void GUI::addFrameToQueue(canFrame _frame)
+{
+    if (global_states.tcp_success)
+        m_frameOutQueue.push(_frame);
+}
+
+bool GUI::getFrame(canFrame& _frame)
+{
+    if (m_frameOutQueue.size() == 0) return false;
+    else {
+        _frame = m_frameOutQueue.front();
+        m_frameOutQueue.pop();
+        return true;
+    }
 }
 
 ImVec4 GUI::byteToColor(uint8_t _byte)

@@ -1,11 +1,27 @@
+/*
+ * ----------------------------------------------------------------------------
+ * "THE BEER-WARE LICENSE" (Revision 42):
+ * <ixam97@ixam97> wrote this file. As long as you retain this notice you
+ * can do whatever you want with this stuff. If we meet some day, and you think
+ * this stuff is worth it, you can buy me a beer in return.
+ *
+ * ----------------------------------------------------------------------------
+ * https://github.com/Ixam97
+ * ----------------------------------------------------------------------------
+ * M‰CAN Control Panel
+ * globals.h
+ * (c)2022 Maximilian Goldschmidt
+ */
+
 #pragma once
 
 #include <string>
 #include <sstream>
 #include <iomanip>
-#include <iostream>
-#include <queue>
-#include "can.h"
+#include <vector>
+#include "../version.h"
+
+#define VERSION stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD)
 
 #define T_SLIDER 1
 #define T_DROPDOWN 2
@@ -41,30 +57,30 @@ struct ProgramCmds
 
 struct configChannel
 {
-	int channel_index;
-	int type;
+	uint8_t channel_index;
+	uint16_t type;
 	int current_value;
 	int wanted_value;
-	int num_options;
+	uint8_t num_options;
 	std::vector<std::string> dropdown_options;
 	std::string dropdown_options_separated_by_zero;
 	std::string label;
 	std::string unit;
-	int min, max;
+	uint16_t min, max;
 	std::string s_min, s_max;
 	bool request_sent = true;
 };
 
 struct readingsChannel
 {
-	int channel_index;
-	int current_value;
+	uint8_t channel_index;
+	int16_t current_value;
 	float value_factor;
 	std::string label;
 	std::string unit;
-	int power;
+	int8_t power;
 	uint8_t colors[4];
-	int points[5];
+	int16_t points[5];
 	std::string s_min, s_max;
 };
 
@@ -88,7 +104,7 @@ struct canDevice
 struct readingsRequestInfo
 {
 	uint32_t uid;
-	int channel;
+	uint8_t channel;
 };
 
 // Data to be accessable globaly

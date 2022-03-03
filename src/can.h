@@ -1,31 +1,30 @@
+/*
+ * ----------------------------------------------------------------------------
+ * "THE BEER-WARE LICENSE" (Revision 42):
+ * <ixam97@ixam97> wrote this file. As long as you retain this notice you
+ * can do whatever you want with this stuff. If we meet some day, and you think
+ * this stuff is worth it, you can buy me a beer in return.
+ *
+ * ----------------------------------------------------------------------------
+ * https://github.com/Ixam97
+ * ----------------------------------------------------------------------------
+ * M‰CAN Control Panel
+ * can.h
+ * (c)2022 Maximilian Goldschmidt
+ */
+
 #pragma once
 #define INQUEUE true
 #define OUTQUEUE false
 
 #include <winsock2.h>
 #include <Ws2tcpip.h>
-#include <windows.h>
 #include <stdint.h>
 #include <queue>
 #include <vector>
 
 #include "globals.h"
-#include "candefs.h"
-
-struct canFrame {
-    canFrame(uint8_t _cmd, uint8_t _resp, uint8_t _dlc, uint8_t _data[8], uint16_t _hash = 0x300);
-    canFrame(uint32_t _id, uint8_t _dlc, uint8_t _data[8]);
-    canFrame();
-    uint32_t id = 0;
-    uint8_t cmd = 0;
-    uint8_t resp = 0;
-    uint16_t can_hash = 0;
-    uint8_t dlc = 0;
-    uint8_t data[8] = { 0,0,0,0,0,0,0,0 };
-};
-
-canFrame newCanFrame(uint8_t _cmd, uint8_t _resp, uint8_t _dlc, uint8_t _data[8], uint16_t _hash = 0x300);
-canFrame newCanFrame(uint8_t _cmd, uint8_t _resp, uint16_t _hash = 0x300);
+#include "canframe.h"
 
 class CAN 
 {
@@ -42,7 +41,7 @@ private:
 public:
 
     // Constructor
-    CAN();
+    // CAN();
 
     // Init a TCP connection
     bool TCPConnect();
@@ -66,21 +65,5 @@ public:
     // bool _b_recframe: OUTQUEUE or INQUEUE
     int addFrameToQueue(canFrame _frame, bool _b_recframe);
 
-    int getQueueLength(bool _b_recqueue);
-};
-
-class ConfigWorker 
-{
-private:
-    std::vector<canFrame> m_frame_vector;
-    int m_current_index = 0;
-    CAN* m_can;
-public:
-    ConfigWorker();
-    ConfigWorker(CAN* _can);
-    uint32_t uid = 0;
-    bool busy = false;
-    void reset();
-    void addFrame(canFrame _frame);
-    void workOn(uint32_t _uid);
+    size_t getQueueLength(bool _b_recqueue);
 };

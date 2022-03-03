@@ -1,12 +1,27 @@
+/*
+ * ----------------------------------------------------------------------------
+ * "THE BEER-WARE LICENSE" (Revision 42):
+ * <ixam97@ixam97> wrote this file. As long as you retain this notice you
+ * can do whatever you want with this stuff. If we meet some day, and you think
+ * this stuff is worth it, you can buy me a beer in return.
+ *
+ * ----------------------------------------------------------------------------
+ * https://github.com/Ixam97
+ * ----------------------------------------------------------------------------
+ * M‰CAN Control Panel
+ * consoledecoder.cpp
+ * (c)2022 Maximilian Goldschmidt
+ */
+
+ /*
+ CAN monitor decoder
+ derived from https://github.com/GBert/railroad/blob/master/can2udp/src/can-monitor.c
+ */
+
 #pragma once
 #include "gui.h"
 
-/*
-CAN monitor decoder
-derived from https://github.com/GBert/railroad/blob/master/can2udp/src/can-monitor.c
-*/
-
-void consoleDecoder(canFrame& _frame, bool& _easy_mode)
+void GUI::consoleDecoder(canFrame& _frame, bool& _easy_mode)
 {
     //if (!_easy_mode) ImGui::Text("0x%08X [%d] %02X %02X %02X %02X %02X %02X %02X %02X", _frame.id, _frame.dlc, _frame.data[0], _frame.data[1], _frame.data[2], _frame.data[3], _frame.data[4], _frame.data[5], _frame.data[6], _frame.data[7]);
     //else ImGui::Text("CMD: 0x%02X RESP.: %d HASH: %04X DLC: %d DATA: %02X %02X %02X %02X %02X %02X %02X %02X", _frame.cmd, _frame.resp, _frame.can_hash, _frame.dlc, _frame.data[0], _frame.data[1], _frame.data[2], _frame.data[3], _frame.data[4], _frame.data[5], _frame.data[6], _frame.data[7]);
@@ -138,8 +153,9 @@ void consoleDecoder(canFrame& _frame, bool& _easy_mode)
         {
             ImGui::Text(" Ping Anfrage");
         }
-    default:break;
-
+		break;
+    default:
+		break;
 
     }
 

@@ -48,6 +48,13 @@
     <ClCompile Include="src\globals.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="src\configworker.cpp" />
+    <ClCompile Include="src\consoledecoder.cpp">
+      <Filter>headers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\canframe.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\gui.h">
@@ -89,11 +96,17 @@
     <ClInclude Include="src\can.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\candefs.h">
+    <ClInclude Include="src\canframe.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\consoledecoder.h">
+    <ClInclude Include="src\configworker.h">
       <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\updater.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="version.h">
+      <Filter>resources</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

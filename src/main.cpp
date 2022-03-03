@@ -1,9 +1,25 @@
+/*
+ * ----------------------------------------------------------------------------
+ * "THE BEER-WARE LICENSE" (Revision 42):
+ * <ixam97@ixam97> wrote this file. As long as you retain this notice you
+ * can do whatever you want with this stuff. If we meet some day, and you think
+ * this stuff is worth it, you can buy me a beer in return.
+ *
+ * ----------------------------------------------------------------------------
+ * https://github.com/Ixam97
+ * ----------------------------------------------------------------------------
+ * M‰CAN Control Panel
+ * main.cpp
+ * (c)2022 Maximilian Goldschmidt
+ */
+
+#include "can.h"
 #include "gui.h"
 #include "globals.h"
 #include "ini.h"
-#include "candefs.h"
+#include "configworker.h"
+#include "updater.h"
 
-#include <stdio.h>
 #include <thread>
 #include <chrono>
 
@@ -14,7 +30,7 @@ mINI::INIFile file("MaeCANControlPanelSettings.ini");
 mINI::INIStructure ini;
 
 CAN can;
-GUI gui;
+GUI gui(1900, 900, u8"M‰CAN Control Panel");
 HWND consoleWindow;
 ConfigWorker configWorker;
 
@@ -25,6 +41,7 @@ bool done = false;
 
 void logicLoop()
 {
+
     while (!done || (can.getQueueLength(OUTQUEUE) > 0)) 
     {
         std::chrono::steady_clock::time_point now_time = std::chrono::high_resolution_clock::now();
@@ -255,6 +272,17 @@ void logicLoop()
             }
         }
 
+        // Interfacing with GUI and ConfigWorker
+        canFrame tmp_frame;
+        while (gui.getFrame(tmp_frame))
+        {
+            can.addFrameToQueue(tmp_frame, OUTQUEUE);
+        }
+        while (configWorker.getFrame(tmp_frame))
+        {
+            can.addFrameToQueue(tmp_frame, OUTQUEUE);
+        }
+
         // Work on Queue to send
         while (can.getQueueLength(OUTQUEUE))
         {
@@ -275,14 +303,6 @@ int main(int argc, char** argv)
 #ifndef _DEBUG
     if (!global_settings.trace) ShowWindow(consoleWindow, SW_HIDE);
 #endif
-
-    // Get the current DPI to calculate the windows setting and scale UI-elements acordingly
-    SetProcessDPIAware();
-    const float scaling = (float)GetDeviceCaps(GetDC(NULL), LOGPIXELSX) / 96;
-
-    gui = GUI(1900, 900, u8"M‰CAN Control Panel", &can, scaling);
-    configWorker = ConfigWorker(&can);
-
 
     // Put logic in seperate thread to not block it when resizing or moving the GUI window
     std::thread logicThread(logicLoop);
