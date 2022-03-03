@@ -11,6 +11,7 @@
  * M‰CAN Control Panel
  * canframe.cpp
  * (c)2022 Maximilian Goldschmidt
+ * Commit: [2022-03-03.1]
  */
 
 #include "canframe.h"

@@ -11,6 +11,7 @@
  * M‰CAN Control Panel
  * updater.h
  * (c)2022 Maximilian Goldschmidt
+ * Commit: [2022-03-03.1]
  */
 
 #pragma once

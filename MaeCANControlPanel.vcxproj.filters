@@ -48,11 +48,13 @@
     <ClCompile Include="src\globals.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="src\configworker.cpp" />
     <ClCompile Include="src\consoledecoder.cpp">
       <Filter>headers</Filter>
     </ClCompile>
     <ClCompile Include="src\canframe.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\configworker.cpp">
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -118,5 +120,10 @@
     <ResourceCompile Include="resource.rc">
       <Filter>resources</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CHANGELOG.md">
+      <Filter>resources</Filter>
+    </None>
   </ItemGroup>
 </Project>

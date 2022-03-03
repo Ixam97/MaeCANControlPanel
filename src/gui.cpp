@@ -11,6 +11,7 @@
  * MäCAN Control Panel
  * gui.cpp
  * (c)2022 Maximilian Goldschmidt
+ * Commit: [2022-03-03.1]
  */
 
 #include "gui.h"
@@ -531,6 +532,7 @@ void GUI::drawInfo()
     if (ImGui::Begin("Über MäCAN Control Panel", &m_draw_info, DialogWindowFlag)) {
         ImGui::Text("MäCAN Control Panel");
         ImGui::Text("Version: %s", VERSION);
+        ImGui::Text("Commit: %s", COMMIT_CODE);
         ImGui::Text("© 2022 Maximilian Goldschmidt");
         ImGui::Text("https://github.com/ixam97, ixam97@ixam97.de");
     }
