@@ -57,6 +57,9 @@
     <ClCompile Include="src\configworker.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="src\updater.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\gui.h">

@@ -7,12 +7,24 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MaeCANControlPanel", "MaeCA
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		AutoGitDebug|x64 = AutoGitDebug|x64
+		AutoGitDebug|x86 = AutoGitDebug|x86
+		AutoGitRelease|x64 = AutoGitRelease|x64
+		AutoGitRelease|x86 = AutoGitRelease|x86
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.AutoGitDebug|x64.ActiveCfg = AutoGitDebug|x64
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.AutoGitDebug|x64.Build.0 = AutoGitDebug|x64
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.AutoGitDebug|x86.ActiveCfg = AutoGitDebug|Win32
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.AutoGitDebug|x86.Build.0 = AutoGitDebug|Win32
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.AutoGitRelease|x64.ActiveCfg = AutoGitRelease|x64
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.AutoGitRelease|x64.Build.0 = AutoGitRelease|x64
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.AutoGitRelease|x86.ActiveCfg = AutoGitRelease|Win32
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.AutoGitRelease|x86.Build.0 = AutoGitRelease|Win32
 		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.Debug|x64.ActiveCfg = Debug|x64
 		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.Debug|x64.Build.0 = Debug|x64
 		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.Debug|x86.ActiveCfg = Debug|Win32

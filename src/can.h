@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * can.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-03.1]
+ * Commit: [2022-03-05.1]
  */
 
 #pragma once
@@ -30,14 +30,14 @@
 class CAN 
 {
 private:
-    std::queue<canFrame> m_frameOutQueue;
-    std::queue<canFrame> m_frameInQueue;
-    long m_return_code = 0;
-    SOCKET s;
-    SOCKADDR_IN addr;
+    static inline std::queue<canFrame> m_frameOutQueue;
+    static inline std::queue<canFrame> m_frameInQueue;
+    static inline long m_return_code = 0;
+    static inline SOCKET s;
+    static inline SOCKADDR_IN addr;
 
-    std::string m_ip = "";
-    int m_port = 0;
+    static inline std::string m_ip = "";
+    static inline int m_port = 0;
 
 public:
 
@@ -45,26 +45,26 @@ public:
     // CAN();
 
     // Init a TCP connection
-    bool TCPConnect();
+    static bool TCPConnect();
 
     // Check for successfull connection
-    void TCPCheckConnection();
+    static void TCPCheckConnection();
 
     // Disconnect TCP connection
-    void TCPDisconnect();
+    static void TCPDisconnect();
 
     // Reads a frame from the TCP socket and adds it to INQUEUE
-    int TCPReadFrame();
+    static int TCPReadFrame();
 
     // Process the queue of CAN frames to be sent
     // bool _b_recque: Determine which queue to process. OUTQUEUE or INQUEUE 
     // Returns the oldest canFrame from the queue
-    canFrame processQueue(bool _b_recqueue);
+    static canFrame processQueue(bool _b_recqueue);
 
     // Add a CAN fram to the queue
     // canFrame _frame : Can frame to be added
     // bool _b_recframe: OUTQUEUE or INQUEUE
-    int addFrameToQueue(canFrame _frame, bool _b_recframe);
+    static int addFrameToQueue(canFrame _frame, bool _b_recframe);
 
-    size_t getQueueLength(bool _b_recqueue);
+    static size_t getQueueLength(bool _b_recqueue);
 };

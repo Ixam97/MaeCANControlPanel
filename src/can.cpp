@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * can.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-03.1]
+ * Commit: [2022-03-05.1]
  */
 
 #include "can.h"
@@ -144,6 +144,14 @@ void CAN::TCPCheckConnection()
 
 void CAN::TCPDisconnect()
 {
+    char datagram[13] = { 0,0,0x03,0x00,5,0,0,0,0,0,0,0,0 };
+    m_return_code = send(s, datagram, 13, 0);
+    if (m_return_code == SOCKET_ERROR)
+    {
+        int iErrorCode = WSAGetLastError();
+        logError("processQueue: Frame could not be sent.", iErrorCode);
+    }
+
     m_return_code = closesocket(s);
     if (m_return_code != SOCKET_ERROR)
     {

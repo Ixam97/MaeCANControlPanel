@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * configworker.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-03.1]
+ * Commit: [2022-03-05.1]
  */
 
 #include "configworker.h"
@@ -22,7 +22,7 @@ void ConfigWorker::reset()
     uid = 0;
     m_current_index = 0;
     m_frameInVector.resize(0);
-    busy = false;
+    m_busy = false;
 
 }
 
@@ -34,7 +34,7 @@ void ConfigWorker::addFrameToQueue(canFrame _frame)
 
 void ConfigWorker::addFrame(canFrame _frame)
 {
-    if (!busy) return;
+    if (!m_busy) return;
 
     m_frameInVector.push_back(_frame);
 
@@ -238,7 +238,7 @@ void ConfigWorker::addFrame(canFrame _frame)
                 // Done
                 else
                 {
-                    busy = false;
+                    m_busy = false;
                     device_list[i].data_complete = true;
                 }
                 break;
@@ -260,7 +260,7 @@ bool ConfigWorker::getFrame(canFrame& _frame)
 void ConfigWorker::workOn(uint32_t _uid)
 {
     m_current_index = 0;
-    busy = true;
+    m_busy = true;
     uid = _uid;
 
     uint8_t i_data[8] = { (uint8_t)(_uid >> 24), (uint8_t)(_uid >> 16),(uint8_t)(_uid >> 8), (uint8_t)_uid, m_current_index, 0,0,0 };

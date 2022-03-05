@@ -11,42 +11,44 @@
  * M‰CAN Control Panel
  * updater.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-03.1]
+ * Commit: [2022-03-05.1]
  */
 
 #pragma once
 
+#define PARSE_ERR_FILE_OPEN -1
+#define PARSE_ERR_CHECKSUM -2
+#define PARSE_ERR_CONVERSION -3
+#define PARSE_ERR_NOT_SUPPORTED -4
+
 #include "globals.h"
 #include "canframe.h"
-#include <fstream>
-#include <iostream>
-#include <filesystem>
-
-
+#include <queue>
 
 class MCANUpdater
 {
 private:
-	inline static std::ifstream hexfile;
-	inline static std::vector<std::string> file_names;
-public:
-	static void getFileNames()
-	{
-		for (auto& file_name : std::filesystem::directory_iterator(std::string(".")))
-		{
-			std::string string_name = file_name.path().string().substr(file_name.path().string().find_last_of('\\') + 1);
-			if (string_name.substr(string_name.find_last_of('.') + 1) == std::string("hex") || string_name.substr(string_name.find_last_of('.') + 1) == std::string("HEX"))
-			{
-				file_names.push_back(file_name.path().string());
-				
-			}
-		}
+	inline static std::queue<canFrame> m_frameInQueue;
+	inline static std::queue<canFrame> m_frameOutQueue;
 
-		for (std::string & file_name : file_names)
-		{
-			std::cout << file_name << std::endl;
-		}
-	}
+	inline static std::vector<std::string> m_file_names;
+
+	inline static std::vector<uint8_t> m_hexfile_byte_stream;
+
+	inline static bool m_busy = false;
+
+	static int hexFileParser(std::string _file_name);
+	static void getFileNames();
+
+public:
+	// Return if updater is running.
+	static bool busy();
+
+	// Pass a frame to the updater
+	static void addFrame(canFrame& _frame);
+
+	// Get a frame the updater wants to send
+	static bool getFrame(canFrame& _frame);
 };
 
 

@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * main.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-03.1]
+ * Commit: [2022-03-05.1]
  */
 
 #include "can.h"
@@ -27,13 +27,15 @@
 #define GLOBAL_SETTING_LOAD ini.get("global-settings")
 #define GLOBAL_SETTING_WRITE ini["global-settings"]
 
+#define CAN_FRAME_TIMEOUT 15 // Timeout in ms
+
 mINI::INIFile file("MaeCANControlPanelSettings.ini");
 mINI::INIStructure ini;
 
-CAN can;
-GUI gui(1900, 900, u8"M‰CAN Control Panel");
+// CAN can;
+// GUI gui(1900, 900, u8"M‰CAN Control Panel");
 HWND consoleWindow;
-ConfigWorker configWorker;
+// ConfigWorker configWorker;
 
 void loadIni();
 void writeIni();
@@ -43,7 +45,7 @@ bool done = false;
 void logicLoop()
 {
 
-    while (!done || (can.getQueueLength(OUTQUEUE) > 0)) 
+    while (!done || (CAN::getQueueLength(OUTQUEUE) > 0))
     {
         std::chrono::steady_clock::time_point now_time = std::chrono::high_resolution_clock::now();
         static std::chrono::steady_clock::time_point last_request_time = now_time;
@@ -59,32 +61,32 @@ void logicLoop()
             for (readingsRequestInfo n : readings_request_list)
             {
                 uint8_t i_data[8] = { (uint8_t)(n.uid >> 24), (uint8_t)(n.uid >> 16),(uint8_t)(n.uid >> 8), (uint8_t)n.uid, SYS_STAT, n.channel,0,0 };
-                can.addFrameToQueue(newCanFrame(SYS_CMD, 0, 6, i_data), OUTQUEUE);
+                CAN::addFrameToQueue(newCanFrame(SYS_CMD, 0, 6, i_data), OUTQUEUE);
             }
         }
 
         if (tcp_check_duration.count() >= 5 && global_states.tcp_success)
         {
             last_tcp_check_time = now_time;
-            can.TCPCheckConnection();
+            CAN::TCPCheckConnection();
         }
             
 
         // Check connection establishment
-        if (global_states.tcp_started) can.TCPCheckConnection();
+        if (global_states.tcp_started) CAN::TCPCheckConnection();
 
         // Start connection establishment
         if (global_cmds.tcp_connect) 
         {
             global_cmds.tcp_connect = false;
-            global_states.tcp_started = can.TCPConnect();
+            global_states.tcp_started = CAN::TCPConnect();
         }
 
         // Disconnect
         if (global_cmds.tcp_disconnect) 
         {
             global_cmds.tcp_disconnect = false;
-            can.TCPDisconnect();
+            CAN::TCPDisconnect();
         }
 
         // Reset congfigWorker when device list is cleared
@@ -93,7 +95,7 @@ void logicLoop()
             global_cmds.config_worker_reset = false;
             device_list.resize(0);
             readings_request_list.resize(0);
-            configWorker.reset();
+            ConfigWorker::reset();
         }
 
         // Save settings after they changed
@@ -107,13 +109,13 @@ void logicLoop()
         }
 
         // Put new frames into queue
-        can.TCPReadFrame();
+        CAN::TCPReadFrame();
 
         // Get new incoming frame from queue
-        if (can.getQueueLength(INQUEUE)) 
+        if (CAN::getQueueLength(INQUEUE))
         {
-            canFrame new_in_frame = can.processQueue(INQUEUE);
-            gui.addFrameToConsoleVector(new_in_frame);
+            canFrame new_in_frame = CAN::processQueue(INQUEUE);
+            GUI::addFrameToConsoleVector(new_in_frame);
 
             switch (new_in_frame.cmd)
             {
@@ -235,25 +237,29 @@ void logicLoop()
                 break;
             case CMD_CONFIG :
                 // Config data frames
-                if (new_in_frame.resp == 1 && configWorker.busy)
+                if (new_in_frame.resp == 1 && ConfigWorker::busy())
                 {
                     // Pass config data frame to configWorker to process
-                    configWorker.addFrame(new_in_frame);
+                    ConfigWorker::addFrame(new_in_frame);
                 }
+                break;
+            case CMD_MCAN_BOOT :
+                if (new_in_frame.resp == 1 && MCANUpdater::busy())
+                    MCANUpdater::addFrame(new_in_frame);
                 break;
             default:
                 break;
             }
         }
         // ConfigWorker constructs config channels for gui
-        if (!configWorker.busy)
+        if (!ConfigWorker::busy())
         {
             // Get first UID from device list without aditional info and pass to configWorker
             for (int i = 0; i < device_list.size(); i++)
             {
                 if (device_list[i].num_config_channels == -1)
                 {
-                    configWorker.workOn(device_list[i].uid);
+                    ConfigWorker::workOn(device_list[i].uid);
                     break;
                 }
             }
@@ -267,29 +273,40 @@ void logicLoop()
                 if (device_list[i].vec_config_channels[j].request_sent == false)
                 {
                     uint8_t frame_data[] = { (uint8_t)(device_list[i].uid >> 24), (uint8_t)(device_list[i].uid >> 16), (uint8_t)(device_list[i].uid >> 8), (uint8_t)(device_list[i].uid), SYS_STAT, device_list[i].vec_config_channels[j].channel_index, (uint8_t)(device_list[i].vec_config_channels[j].wanted_value >> 8), (uint8_t)(device_list[i].vec_config_channels[j].wanted_value) };
-                    can.addFrameToQueue(newCanFrame(SYS_CMD, 0, 8, frame_data), OUTQUEUE);
+                    CAN::addFrameToQueue(newCanFrame(SYS_CMD, 0, 8, frame_data), OUTQUEUE);
                     device_list[i].vec_config_channels[j].request_sent = true;
                 }
             }
         }
 
-        // Interfacing with GUI and ConfigWorker
+        // Interfacing with other modules using CAN
         canFrame tmp_frame;
-        while (gui.getFrame(tmp_frame))
+        while (GUI::getFrame(tmp_frame))
         {
-            can.addFrameToQueue(tmp_frame, OUTQUEUE);
+            CAN::addFrameToQueue(tmp_frame, OUTQUEUE);
         }
-        while (configWorker.getFrame(tmp_frame))
+        while (ConfigWorker::getFrame(tmp_frame))
         {
-            can.addFrameToQueue(tmp_frame, OUTQUEUE);
+            CAN::addFrameToQueue(tmp_frame, OUTQUEUE);
+        }
+        while (MCANUpdater::getFrame(tmp_frame))
+        {
+            CAN::addFrameToQueue(tmp_frame, OUTQUEUE);
         }
 
         // Work on Queue to send
-        while (can.getQueueLength(OUTQUEUE))
+        if (CAN::getQueueLength(OUTQUEUE))
         {
-            // Send queued frames
-            canFrame newOutFrame = can.processQueue(OUTQUEUE);
-            if (newOutFrame.can_hash > 0) gui.addFrameToConsoleVector(newOutFrame);
+            // Send queued frames after timeout
+            static auto _last_time_sent = std::chrono::high_resolution_clock::now();
+            auto _current_time = std::chrono::high_resolution_clock::now();
+
+            if (_current_time - _last_time_sent > std::chrono::milliseconds(CAN_FRAME_TIMEOUT))
+            {
+                _last_time_sent = _current_time;
+                canFrame newOutFrame = CAN::processQueue(OUTQUEUE);
+                if (newOutFrame.can_hash > 0) GUI::addFrameToConsoleVector(newOutFrame);
+            }
         }
         Sleep(1);
     }
@@ -304,24 +321,25 @@ int main(int argc, char** argv)
 #ifndef _DEBUG
     if (!global_settings.trace) ShowWindow(consoleWindow, SW_HIDE);
 #endif
+    GUI::GUISetup(1900, 900, u8"M‰CAN Control Panel");
 
     // Put logic in seperate thread to not block it when resizing or moving the GUI window
     std::thread logicThread(logicLoop);
 
     // GUI loop
     while (!done) {
-        gui.poll(&done);
-        gui.newFrame();
-        gui.drawMainWindow();
-        gui.render();
+        GUI::poll(&done);
+        GUI::newFrame();
+        GUI::drawMainWindow();
+        GUI::render();
     }
 
     //ShowWindow(consoleWindow, SW_SHOW);
 
     logicThread.join();
 
-    gui.cleanup();
-    can.TCPDisconnect();
+    GUI::cleanup();
+    CAN::TCPDisconnect();
 
 
     return 0;

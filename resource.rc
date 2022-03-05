@@ -74,8 +74,22 @@ VS_VERSION_INFO VERSIONINFO
  FILETYPE 0x1L
  FILESUBTYPE 0x0L
 BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040704b0"
+        BEGIN
             VALUE "FileVersion", stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD)
+            VALUE "InternalName", "MaeCANControlPanel.exe"
+            VALUE "LegalCopyright", "Copyright (C) 2022 Maximilian Goldschmidt"
+            VALUE "OriginalFilename", "MaeCANControlPanel.exe"
+            VALUE "ProductName", "MaeCAN Control Panel"
             VALUE "ProductVersion", stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD)
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x407, 1200
+    END
 END
 
 #endif    // Deutsch (Deutschland) resources

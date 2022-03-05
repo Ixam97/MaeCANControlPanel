@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * gui.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-03.1]
+ * Commit: [2022-03-05.1]
  */
 
 #include "gui.h"
@@ -20,7 +20,7 @@
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
 #endif
 
-GUI::GUI(int x_res, int y_res, const char* window_name) {
+void GUI::GUISetup(int x_res, int y_res, const char* window_name) {
 
     SetProcessDPIAware();
     m_scaling = (float)GetDeviceCaps(GetDC(NULL), LOGPIXELSX) / 96;
