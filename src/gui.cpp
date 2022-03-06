@@ -11,10 +11,12 @@
  * MäCAN Control Panel
  * gui.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-05.1]
+ * Commit: [2022-03-06.1]
  */
 
 #include "gui.h"
+#include <sstream>
+#include <windows.h>
 
 #if !SDL_VERSION_ATLEAST(2,0,17)
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
@@ -154,6 +156,14 @@ void GUI::drawMainWindow() {
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("Datei")) {
                 if (ImGui::MenuItem("Einstellungen")) m_draw_settings = true;
+                // if (ImGui::MenuItem("Updater Test"))
+                // {
+                //     update_interfrace.uid = 0x4d43080a;
+                //     update_interfrace.type = 0x52;
+                //     update_interfrace.file_name = "MP5+D.hex";
+                //     update_interfrace.do_update = true;
+                // }
+                // if (ImGui::MenuItem("Update Abbrechen")) update_interfrace.do_abort = true;
                 ImGui::Separator();
                 ImGui::MenuItem("Beenden", "Alt+F4", &m_exit);
                 ImGui::EndMenu();
@@ -260,6 +270,7 @@ void GUI::drawMainWindow() {
     if (m_draw_consoles) drawConsoles();
     if (m_draw_device_manager) drawDeviceManager(); 
     if (m_draw_info) drawInfo();
+    if (m_draw_updater) drawUpdateInfo();
 #ifdef _DEBUG
     // if (m_draw_debug_monitor) ImGui::ShowMetricsWindow(&m_draw_debug_monitor);
     if (m_draw_debug_monitor) drawDebugMonitor();
@@ -458,6 +469,12 @@ void GUI::drawDeviceManager()
         ImGui::Text("Version: %d.%d", device_list[current_index].version_h, device_list[current_index].version_l);
         ImGui::Text("UID: 0x%08X", device_list[current_index].uid);
         ImGui::Text("Konfigurationskanäle: %d, Messwertkanäle: %d", device_list[current_index].num_config_channels, device_list[current_index].num_readings_channels);
+
+        if (ImGui::Button("Update")) {
+            m_update_uid = device_list[current_index].uid;
+            m_update_type = device_list[current_index].type;
+            m_draw_updater = true;
+        }
     
         if (device_list[current_index].num_readings_channels > 0)
         {
@@ -538,6 +555,79 @@ void GUI::drawInfo()
     }
     ImGui::End();
     
+}
+
+void GUI::drawUpdateInfo()
+{
+    if (ImGui::Begin("MäCAN Updater", NULL, DialogWindowFlag)) {
+
+        static bool filter_file_names = true;
+        static std::string s_file_names;
+        static int selected_file_index = 0;
+
+        if (update_interfrace.file_names.size() == 0)
+            update_interfrace.get_file_names = true;
+
+        if (s_file_names.size() == 0 && update_interfrace.file_names.size() > 0) 
+        {
+            std::stringstream ss_file_names;
+            for (std::string& s : update_interfrace.file_names)
+            {
+                ss_file_names << s << '\0';
+            }
+            s_file_names = ss_file_names.str();
+        }
+
+        ImGui::Text("UID: 0x%08X, Typ 0x%02X", m_update_uid, m_update_type);
+        // ImGui::Checkbox("Dateinamen filtern", &filter_file_names);
+        ImGui::Combo("HEX-Datei", &selected_file_index, s_file_names.c_str());
+        ImGui::Separator();
+        if (ImGui::Button("Update starten") && !update_interfrace.in_progress)
+        {
+            update_interfrace.file_name = update_interfrace.file_names[selected_file_index];
+            update_interfrace.type = m_update_type;
+            update_interfrace.uid = m_update_uid;
+            update_interfrace.do_update = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Schließen"))
+        {
+            if (!update_interfrace.in_progress)
+            {
+                m_draw_updater = false;
+                update_interfrace.status = 0;
+            }
+        }
+
+        if (update_interfrace.status > 0)
+        {
+            ImGui::Separator();
+            ImGui::ProgressBar(update_interfrace.progress);
+            switch (update_interfrace.status)
+            {
+            case MCAN_UPDATE_IN_PROGRESS: 
+                ImGui::Text("Update im gange...");
+                break;
+            case MCAN_UPDATE_FAILURE_ERROR:
+                ImGui::Text("Update wegen eines Fehlers abgebrochen");
+                break;
+            case MCAN_UPDATE_FAILURE_INCOMPATIBLE:
+                ImGui::Text("Updater inkompatibel zum Bootloader");
+                break;
+            case MCAN_UPDATE_SUCCESS:
+                ImGui::Text("Update erfolgreich abgeschlossen");
+                break;
+            default:
+                ImGui::Text("Unbekannter Status");
+                break;
+            }
+            if (ImGui::Button("Abbrechen") && update_interfrace.in_progress)
+                update_interfrace.do_abort = true;
+        }
+            
+
+    }
+    ImGui::End();
 }
 
 void GUI::addFrameToQueue(canFrame _frame)

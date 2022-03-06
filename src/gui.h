@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * gui.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-05.1]
+ * Commit: [2022-03-06.1]
  */
 
 #ifndef GUI_H_
@@ -23,7 +23,6 @@
 #include "SDL.h"
 #include "SDL_main.h"
 #include "canframe.h"
-#include <windows.h>
 #include <queue>
 #include "globals.h"
 
@@ -55,6 +54,10 @@ private:
     static inline bool m_draw_device_manager = true;
     static inline bool m_draw_debug_monitor = false;
     static inline bool m_draw_info = false;
+    static inline bool m_draw_updater = false;
+
+    static inline uint32_t m_update_uid;
+    static inline uint16_t m_update_type;
 
     static inline ImVec2 m_main_size;
     static inline ImVec2 m_status_size;
@@ -65,6 +68,8 @@ private:
     static void drawConsoles();
     static void drawDeviceManager();
     static void drawInfo();
+    static void drawUpdateInfo();
+
     static void addFrameToQueue(canFrame _frame);
     static ImVec4 byteToColor(uint8_t _byte);
     static void customSytle(ImGuiStyle* dst = NULL);

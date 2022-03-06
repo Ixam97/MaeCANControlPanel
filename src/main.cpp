@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * main.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-05.1]
+ * Commit: [2022-03-06.1]
  */
 
 #include "can.h"
@@ -27,7 +27,7 @@
 #define GLOBAL_SETTING_LOAD ini.get("global-settings")
 #define GLOBAL_SETTING_WRITE ini["global-settings"]
 
-#define CAN_FRAME_TIMEOUT 15 // Timeout in ms
+#define CAN_FRAME_TIMEOUT 10 // Timeout in ms
 
 mINI::INIFile file("MaeCANControlPanelSettings.ini");
 mINI::INIStructure ini;
@@ -107,6 +107,45 @@ void logicLoop()
 #endif
             writeIni();
         }
+
+        // ConfigWorker constructs config channels for gui
+        if (!ConfigWorker::busy() && !MCANUpdater::busy())
+        {
+            // Get first UID from device list without aditional info and pass to configWorker
+            for (int i = 0; i < device_list.size(); i++)
+            {
+                if (device_list[i].num_config_channels == -1)
+                {
+                    ConfigWorker::workOn(device_list[i].uid);
+                    break;
+                }
+            }
+        }
+
+        // Updater Interface
+        if (update_interfrace.get_file_names)
+        {
+            update_interfrace.get_file_names = false;
+            MCANUpdater::getFileNames(update_interfrace.file_names);
+        }
+        if (update_interfrace.do_update)
+        {
+            update_interfrace.do_update = false;
+            if(!MCANUpdater::busy() && !ConfigWorker::busy())
+                update_interfrace.status = MCANUpdater::startUpdate(update_interfrace.uid, update_interfrace.type, update_interfrace.file_name);
+        }
+        if (update_interfrace.do_abort)
+        {
+            update_interfrace.do_abort = false;
+            if (MCANUpdater::busy())
+                update_interfrace.status = MCANUpdater::abortUpdate();
+        }
+
+        if (MCANUpdater::busy() != update_interfrace.in_progress)
+            update_interfrace.in_progress = MCANUpdater::busy();
+
+        if (MCANUpdater::getProgress() != update_interfrace.progress)
+            update_interfrace.progress = MCANUpdater::getProgress();
 
         // Put new frames into queue
         CAN::TCPReadFrame();
@@ -245,23 +284,12 @@ void logicLoop()
                 break;
             case CMD_MCAN_BOOT :
                 if (new_in_frame.resp == 1 && MCANUpdater::busy())
-                    MCANUpdater::addFrame(new_in_frame);
+                {
+                    update_interfrace.status = MCANUpdater::addFrame(new_in_frame);
+                }
                 break;
             default:
                 break;
-            }
-        }
-        // ConfigWorker constructs config channels for gui
-        if (!ConfigWorker::busy())
-        {
-            // Get first UID from device list without aditional info and pass to configWorker
-            for (int i = 0; i < device_list.size(); i++)
-            {
-                if (device_list[i].num_config_channels == -1)
-                {
-                    ConfigWorker::workOn(device_list[i].uid);
-                    break;
-                }
             }
         }
 

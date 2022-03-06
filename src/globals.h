@@ -11,14 +11,12 @@
  * M‰CAN Control Panel
  * globals.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-03.1]
+ * Commit: [2022-03-06.1]
  */
 
 #pragma once
 
 #include <string>
-#include <sstream>
-#include <iomanip>
 #include <vector>
 #include "../version.h"
 
@@ -26,6 +24,18 @@
 
 #define T_SLIDER 1
 #define T_DROPDOWN 2
+
+#define PARSE_ERR_FILE_OPEN -1
+#define PARSE_ERR_CHECKSUM -2
+#define PARSE_ERR_CONVERSION -3
+#define PARSE_ERR_NOT_SUPPORTED -4
+
+#define MCAN_UPDATE_IDLE 0
+#define MCAN_UPDATE_IN_PROGRESS 1
+#define MCAN_UPDATE_FAILURE_ERROR 2
+#define MCAN_UPDATE_FAILURE_INCOMPATIBLE 3
+#define MCAN_UPDATE_SUCCESS 4
+#define MCAN_UPDATE_INIT 5
 
 struct ProgramSettings 
 {
@@ -108,10 +118,26 @@ struct readingsRequestInfo
 	uint8_t channel;
 };
 
+struct UpdaterInterface
+{
+	uint32_t uid;
+	uint16_t type;
+	int status;
+	bool do_update = false;
+	bool do_abort = false;
+	bool get_file_names = false;
+	bool in_progress = false;
+	float progress = 0.0f;
+	std::vector<std::string> file_names;
+	std::string file_name;
+
+};
+
 // Data to be accessable globaly
 extern struct ProgramSettings global_settings;
 extern struct ProgramStates global_states;
 extern struct ProgramCmds global_cmds;
+extern struct UpdaterInterface update_interfrace;
 
 extern std::vector<canDevice> device_list;
 extern std::vector<readingsRequestInfo> readings_request_list;

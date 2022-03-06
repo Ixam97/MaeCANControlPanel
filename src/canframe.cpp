@@ -11,11 +11,10 @@
  * M‰CAN Control Panel
  * canframe.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-03.1]
+ * Commit: [2022-03-06.1]
  */
 
 #include "canframe.h"
-#include <cstring>
 
 canFrame::canFrame(uint8_t _cmd, uint8_t _resp, uint8_t _dlc, uint8_t _data[8], uint16_t _hash)
 {
@@ -23,7 +22,8 @@ canFrame::canFrame(uint8_t _cmd, uint8_t _resp, uint8_t _dlc, uint8_t _data[8], 
     resp = _resp;
     dlc = _dlc;
     can_hash = _hash;
-    memcpy(data, _data, 8);
+    for (int i = 0; i < 8; i++)
+        data[i] = _data[i];
     id = (cmd << 17) | ((_resp & 1) << 16) | _hash;
 }
 
@@ -31,7 +31,8 @@ canFrame::canFrame(uint32_t _id, uint8_t _dlc, uint8_t _data[8])
 {
     id = _id;
     dlc = _dlc;
-    memcpy(data, _data, 8);
+    for (int i = 0; i < 8; i++)
+        data[i] = _data[i];
     cmd = (uint8_t)(id >> 17);
     resp = (uint8_t)(id >> 16) & 0b1;
     can_hash = (uint16_t)id & 0xffff;

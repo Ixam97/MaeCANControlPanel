@@ -4,4 +4,4 @@
  - MäCAN-Updater integriert.
 
 ## v0.0.0.1
- - Erster Build auf GitHub
+ - Erster Build auf GitHub.

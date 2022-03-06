@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * consoledecoder.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-03.1]
+ * Commit: [2022-03-06.1]
  */
 
  /*
@@ -21,6 +21,8 @@
 
 #pragma once
 #include "gui.h"
+#include <sstream>
+#include <iomanip>
 
 void GUI::consoleDecoder(canFrame& _frame, bool& _easy_mode)
 {

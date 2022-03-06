@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * globals.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-03.1]
+ * Commit: [2022-03-06.1]
  */
 
 #include "globals.h"
@@ -19,6 +19,7 @@
 ProgramSettings global_settings;
 ProgramStates global_states;
 ProgramCmds global_cmds;
+UpdaterInterface update_interfrace;
 
 std::vector<canDevice> device_list;
 std::vector<readingsRequestInfo> readings_request_list;
