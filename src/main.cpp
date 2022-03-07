@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * main.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-06.1]
+ * Commit: [2022-03-07.1]
  */
 
 #include "can.h"
@@ -32,10 +32,7 @@
 mINI::INIFile file("MaeCANControlPanelSettings.ini");
 mINI::INIStructure ini;
 
-// CAN can;
-// GUI gui(1900, 900, u8"M‰CAN Control Panel");
 HWND consoleWindow;
-// ConfigWorker configWorker;
 
 void loadIni();
 void writeIni();
@@ -246,8 +243,8 @@ void logicLoop()
                 }
                 break;
             case CMD_PING:
-                // Ping response from other devices
-                if (new_in_frame.resp == 1)
+                // Ping response from other devices (Ignore CS2)
+                if (new_in_frame.resp == 1 && new_in_frame.data[7] != 0xff)
                 {
                     // Check if device already on device list
                     bool i_known_device = false;

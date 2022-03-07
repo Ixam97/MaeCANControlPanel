@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * updater.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-06.1]
+ * Commit: [2022-03-07.1]
  */
 
 #include "updater.h"
@@ -143,7 +143,8 @@ int MCANUpdater::addFrame(canFrame& _frame)
 	int return_code = MCAN_UPDATE_FAILURE_ERROR;
 
 	/* 
-	 * 0x01 : Offer/Accept Update
+	 * 0x01 : Offer/Accept Update (LEGACY)
+	 * 0x11 : Offer/Accept Update
 	 * 0x02 : Page Size (16Bit)
 	 * 0x03 : Page count (16Bit)
 	 * 0x04 : Begin Page (LEGACY, 8Bit page index)
@@ -160,6 +161,22 @@ int MCANUpdater::addFrame(canFrame& _frame)
 		if (_frame.dlc == 6) 
 		{
 			m_legacy = true;
+			m_reported_type = _frame.data[5];
+			return_code = MCAN_UPDATE_IN_PROGRESS;
+			logInfo("MCANUpdater: Beginning update in Legacy Mode");
+		}
+		else if (_frame.dlc == 7)
+		{
+			if (_frame.data[6] > 0)
+			{
+				m_legacy = false;
+				logInfo("MCANUpdater: Beginning update");
+			}
+			else
+			{
+				m_legacy = true;
+				logInfo("MCANUpdater: Beginning update in Legacy Mode");
+			}
 			m_reported_type = _frame.data[5];
 			return_code = MCAN_UPDATE_IN_PROGRESS;
 		}
@@ -217,7 +234,6 @@ int MCANUpdater::addFrame(canFrame& _frame)
 					// Send next page
 					sendPage(m_page_index);
 					m_progress = (float)m_page_index / m_file_page_count;
-					printf("%f\n", m_progress);
 					return_code = MCAN_UPDATE_IN_PROGRESS;
 				}
 				
@@ -248,7 +264,7 @@ int MCANUpdater::addFrame(canFrame& _frame)
 			{
 				// Send next page
 				sendPage(m_page_index);
-				m_progress = (float)m_page_index / m_page_count;
+				m_progress = (float)m_page_index / m_file_page_count;
 				return_code = MCAN_UPDATE_IN_PROGRESS;
 			}
 		}
@@ -301,8 +317,16 @@ int MCANUpdater::addFrame(canFrame& _frame)
 
 void MCANUpdater::sendPage(int _index)
 {
-	uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0x04, (uint8_t)_index, 0,0};
-	m_frameOutQueue.push(newCanFrame(0x40, 0, 6, tmp_data));
+	if (m_legacy)
+	{
+		uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0x04, (uint8_t)_index, 0,0 };
+		m_frameOutQueue.push(newCanFrame(0x40, 0, 6, tmp_data));
+	}
+	else
+	{
+		uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0x14, (uint8_t)(_index >> 8), (uint8_t)_index,0 };
+		m_frameOutQueue.push(newCanFrame(0x40, 0, 7, tmp_data));
+	}
 
 	for (int i = 0; i < m_page_size / 8; i++)
 	{
@@ -314,8 +338,17 @@ void MCANUpdater::sendPage(int _index)
 		}
 		m_frameOutQueue.push(newCanFrame(0x40, 0, 8, payload_data, 0x300 + i + 1));
 	}
-	tmp_data[4] = 0x05;
-	m_frameOutQueue.push(newCanFrame(0x40, 0, 6, tmp_data));
+
+	if (m_legacy)
+	{
+		uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0x05, (uint8_t)_index, 0,0 };
+		m_frameOutQueue.push(newCanFrame(0x40, 0, 6, tmp_data));
+	}
+	else
+	{
+		uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0x15, (uint8_t)(_index >> 8), (uint8_t)_index,0 };
+		m_frameOutQueue.push(newCanFrame(0x40, 0, 7, tmp_data));
+	}
 
 }
 
@@ -330,14 +363,16 @@ bool MCANUpdater::getFrame(canFrame& _frame)
 
 void MCANUpdater::getFileNames(std::vector<std::string>& _file_names)
 {
+	std::vector<std::string> tmp_file_names;
 	for (auto& file_name : std::filesystem::directory_iterator(std::string(".")))
 	{
 		std::string string_name = file_name.path().string().substr(file_name.path().string().find_last_of('\\') + 1);
 		if (string_name.substr(string_name.find_last_of('.') + 1) == std::string("hex") || string_name.substr(string_name.find_last_of('.') + 1) == std::string("HEX"))
 		{
-			_file_names.push_back(file_name.path().string());
+			tmp_file_names.push_back(file_name.path().string());
 		}
 	}
+	_file_names = tmp_file_names;
 }
 
 int MCANUpdater::startUpdate(uint32_t _uid, uint16_t _type, std::string _file_name)

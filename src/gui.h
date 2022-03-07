@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * gui.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-06.1]
+ * Commit: [2022-03-07.1]
  */
 
 #ifndef GUI_H_
@@ -37,6 +37,7 @@ private:
     static inline SDL_Renderer* m_renderer = nullptr;
     static inline SDL_Window* m_window = nullptr;
     static inline ImFont* m_font = nullptr;
+    static inline ImFont* m_bold_font = nullptr;
     static inline ImFont* m_consolas = nullptr;
 
     static inline SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);;
@@ -58,6 +59,7 @@ private:
 
     static inline uint32_t m_update_uid;
     static inline uint16_t m_update_type;
+    static inline std::string m_update_name;
 
     static inline ImVec2 m_main_size;
     static inline ImVec2 m_status_size;

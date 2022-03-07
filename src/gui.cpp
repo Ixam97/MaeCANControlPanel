@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * gui.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-06.1]
+ * Commit: [2022-03-07.1]
  */
 
 #include "gui.h"
@@ -21,6 +21,16 @@
 #if !SDL_VERSION_ATLEAST(2,0,17)
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
 #endif
+
+bool ButtonDisablable(const char* _label, bool _disable = false)
+{
+    bool b_return;
+    if (_disable) ImGui::BeginDisabled();
+    b_return = ImGui::Button(_label);
+    if (_disable) ImGui::EndDisabled();
+    return b_return;
+    
+}
 
 void GUI::GUISetup(int x_res, int y_res, const char* window_name) {
 
@@ -72,6 +82,7 @@ void GUI::GUISetup(int x_res, int y_res, const char* window_name) {
     ImGui_ImplSDLRenderer_Init(m_renderer);
 
     m_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\seguisym.ttf", floor(18.0f * m_scaling));
+    m_bold_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\seguisym.ttf", floor(24.0f * m_scaling));
     m_consolas = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\consola.ttf", floor(14.0f * m_scaling));
 }
 
@@ -293,7 +304,9 @@ void GUI::drawSettings()
         local_settings = global_settings;
     }
 
+    ImGui::PushFont(m_bold_font);
     ImGui::Text("Netzwerkeinstellungen");
+    ImGui::PopFont();
     
     char _IP[16];
     memcpy(_IP, local_settings.tcp_ip.c_str(), 16);
@@ -306,7 +319,9 @@ void GUI::drawSettings()
 
     
 
+    ImGui::PushFont(m_bold_font);
     ImGui::Text("Trace-Einstellungen");
+    ImGui::PopFont();
     ImGui::Checkbox("Trace anzeigen", &(local_settings.trace));
     if (ImGui::Combo("Trace-Level", &(local_settings.trace_level), "Error\0Warnung\0Info\0")) {
         
@@ -458,67 +473,71 @@ void GUI::drawDeviceManager()
         ImGui::EndListBox();
     }
     ImGui::SameLine();
-    ImGui::BeginChild("DeviceInfoRegion");
-
-    if (device_list.size() > 0 && device_list[current_index].data_complete)
+    if (ImGui::BeginChild("DeviceInfoRegion"))
     {
-        ImGui::Text(device_list[current_index].name.c_str());
-        ImGui::Separator();
-        ImGui::Text("Artikelnummer: %s ", device_list[current_index].item.c_str());
-        ImGui::Text("Seriennummer: %d", device_list[current_index].serialnbr);
-        ImGui::Text("Version: %d.%d", device_list[current_index].version_h, device_list[current_index].version_l);
-        ImGui::Text("UID: 0x%08X", device_list[current_index].uid);
-        ImGui::Text("Konfigurationskanäle: %d, Messwertkanäle: %d", device_list[current_index].num_config_channels, device_list[current_index].num_readings_channels);
-
-        if (ImGui::Button("Update")) {
-            m_update_uid = device_list[current_index].uid;
-            m_update_type = device_list[current_index].type;
-            m_draw_updater = true;
-        }
-    
-        if (device_list[current_index].num_readings_channels > 0)
+        if (device_list.size() > 0 && device_list[current_index].data_complete)
         {
+            ImGui::PushFont(m_bold_font);
+            ImGui::Text(device_list[current_index].name.c_str());
+            ImGui::PopFont();
             ImGui::Separator();
-            for (readingsChannel n : device_list[current_index].vec_readings_channels)
-            {
-                float true_value = (n.current_value * n.value_factor) + std::stof(n.s_min);
-                float relative_value = (true_value - std::stof(n.s_min)) / (std::stof(n.s_max) - std::stof(n.s_min));
-                ImGui::Text("%s: %.2f %s", n.label.c_str(), true_value, n.unit.c_str());
+            ImGui::Text("Artikelnummer: %s ", device_list[current_index].item.c_str());
+            ImGui::Text("Seriennummer: %d", device_list[current_index].serialnbr);
+            ImGui::Text("Version: %d.%d", device_list[current_index].version_h, device_list[current_index].version_l);
+            ImGui::Text("UID: 0x%08X", device_list[current_index].uid);
+            ImGui::Text("Konfigurationskanäle: %d, Messwertkanäle: %d", device_list[current_index].num_config_channels, device_list[current_index].num_readings_channels);
 
-                if (n.current_value > n.points[3]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[3]));
-                else if (n.current_value > n.points[2]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[2]));
-                else if (n.current_value > n.points[1]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[1]));
-                else ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[0]));
-                ImGui::ProgressBar(relative_value, ImVec2(-1, 0), "");
-                ImGui::PopStyleColor();                
+            if (ImGui::Button("Update")) {
+                m_update_uid = device_list[current_index].uid;
+                m_update_type = device_list[current_index].type;
+                m_update_name = device_list[current_index].name;
+                m_draw_updater = true;
             }
-        }
-        if (device_list[current_index].num_config_channels > 0)
-        {
-            ImGui::Separator();
-            for (int i = 0; i < device_list[current_index].vec_config_channels.size(); i++)
-            {
-                //if (n.unit == "") ImGui::Text("%s", n.label.c_str());
-                //else ImGui::Text("%s (%s)", n.label.c_str(), n.unit.c_str());
+            ImGui::SameLine();
+            ButtonDisablable("Aus Liste löschen", true);
 
-                // Drop down
-                if (device_list[current_index].vec_config_channels[i].type == 1)
+            if (device_list[current_index].num_readings_channels > 0)
+            {
+                ImGui::Separator();
+                for (readingsChannel n : device_list[current_index].vec_readings_channels)
                 {
-                    if (ImGui::Combo(device_list[current_index].vec_config_channels[i].label.c_str(), &(device_list[current_index].vec_config_channels[i].wanted_value), device_list[current_index].vec_config_channels[i].dropdown_options_separated_by_zero.c_str()))
-                        device_list[current_index].vec_config_channels[i].request_sent = false;
-                }
-                // Int slider
-                else if (device_list[current_index].vec_config_channels[i].type == 2)
-                {
-                    if (ImGui::SliderInt(device_list[current_index].vec_config_channels[i].label.c_str(), &(device_list[current_index].vec_config_channels[i].wanted_value), device_list[current_index].vec_config_channels[i].min, device_list[current_index].vec_config_channels[i].max))
-                        device_list[current_index].vec_config_channels[i].request_sent = false;
-                    ImGui::SameLine(); helpMarker("STRG + Klick, um Zahlenwerte einzugeben.");
+                    float true_value = (n.current_value * n.value_factor) + std::stof(n.s_min);
+                    float relative_value = (true_value - std::stof(n.s_min)) / (std::stof(n.s_max) - std::stof(n.s_min));
+                    ImGui::Text("%s: %.2f %s", n.label.c_str(), true_value, n.unit.c_str());
+
+                    if (n.current_value > n.points[3]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[3]));
+                    else if (n.current_value > n.points[2]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[2]));
+                    else if (n.current_value > n.points[1]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[1]));
+                    else ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[0]));
+                    ImGui::ProgressBar(relative_value, ImVec2(-1, 0), "");
+                    ImGui::PopStyleColor();
                 }
             }
+            if (device_list[current_index].num_config_channels > 0)
+            {
+                ImGui::Separator();
+                for (int i = 0; i < device_list[current_index].vec_config_channels.size(); i++)
+                {
+                    //if (n.unit == "") ImGui::Text("%s", n.label.c_str());
+                    //else ImGui::Text("%s (%s)", n.label.c_str(), n.unit.c_str());
+
+                    // Drop down
+                    if (device_list[current_index].vec_config_channels[i].type == 1)
+                    {
+                        if (ImGui::Combo(device_list[current_index].vec_config_channels[i].label.c_str(), &(device_list[current_index].vec_config_channels[i].wanted_value), device_list[current_index].vec_config_channels[i].dropdown_options_separated_by_zero.c_str()))
+                            device_list[current_index].vec_config_channels[i].request_sent = false;
+                    }
+                    // Int slider
+                    else if (device_list[current_index].vec_config_channels[i].type == 2)
+                    {
+                        if (ImGui::SliderInt(device_list[current_index].vec_config_channels[i].label.c_str(), &(device_list[current_index].vec_config_channels[i].wanted_value), device_list[current_index].vec_config_channels[i].min, device_list[current_index].vec_config_channels[i].max))
+                            device_list[current_index].vec_config_channels[i].request_sent = false;
+                        ImGui::SameLine(); helpMarker("STRG + Klick, um Zahlenwerte einzugeben.");
+                    }
+                }
+            }
         }
-    
     }
-
     ImGui::EndChild();
 
     ImGui::End();
@@ -546,8 +565,11 @@ void GUI::drawDebugMonitor() {
 
 void GUI::drawInfo()
 {
-    if (ImGui::Begin("Über MäCAN Control Panel", &m_draw_info, DialogWindowFlag)) {
+    if (ImGui::Begin("Über MäCAN Control Panel", &m_draw_info, DialogWindowFlag)) 
+    {
+        ImGui::PushFont(m_bold_font);
         ImGui::Text("MäCAN Control Panel");
+        ImGui::PopFont();
         ImGui::Text("Version: %s", VERSION);
         ImGui::Text("Commit: %s", COMMIT_CODE);
         ImGui::Text("© 2022 Maximilian Goldschmidt");
@@ -562,27 +584,61 @@ void GUI::drawUpdateInfo()
     if (ImGui::Begin("MäCAN Updater", NULL, DialogWindowFlag)) {
 
         static bool filter_file_names = true;
+        static bool file_names_read = false;
         static std::string s_file_names;
         static int selected_file_index = 0;
+        static size_t last_file_names_size = 0;
 
-        if (update_interfrace.file_names.size() == 0)
-            update_interfrace.get_file_names = true;
+        if (!update_interfrace.get_file_names) update_interfrace.get_file_names = true;
 
-        if (s_file_names.size() == 0 && update_interfrace.file_names.size() > 0) 
+        if (last_file_names_size != update_interfrace.file_names.size())
         {
+            last_file_names_size = update_interfrace.file_names.size();
             std::stringstream ss_file_names;
             for (std::string& s : update_interfrace.file_names)
             {
                 ss_file_names << s << '\0';
             }
             s_file_names = ss_file_names.str();
+            file_names_read = false;
         }
 
+        ImGui::PushFont(m_bold_font);
+        ImGui::Text("Update für %s", m_update_name.c_str());
+        ImGui::PopFont();
         ImGui::Text("UID: 0x%08X, Typ 0x%02X", m_update_uid, m_update_type);
-        // ImGui::Checkbox("Dateinamen filtern", &filter_file_names);
-        ImGui::Combo("HEX-Datei", &selected_file_index, s_file_names.c_str());
         ImGui::Separator();
-        if (ImGui::Button("Update starten") && !update_interfrace.in_progress)
+        ImGui::Combo("HEX-Datei", &selected_file_index, s_file_names.c_str());
+
+        ImGui::ProgressBar(update_interfrace.progress);
+
+        switch (update_interfrace.status)
+        {
+        case MCAN_UPDATE_IDLE:
+            ImGui::Text("Update nicht gestartet");
+            break;
+        case MCAN_UPDATE_IN_PROGRESS: 
+            ImGui::Text("Update läuft");
+            break;
+        case MCAN_UPDATE_FAILURE_ERROR:
+            ImGui::Text("Update wegen eines Fehlers abgebrochen");
+            break;
+        case MCAN_UPDATE_FAILURE_INCOMPATIBLE:
+            ImGui::Text("Updater inkompatibel zum Bootloader");
+            break;
+        case MCAN_UPDATE_SUCCESS:
+            ImGui::Text("Update erfolgreich abgeschlossen");
+            break;
+        case MCAN_UPDATE_INIT:
+            ImGui::Text("Update wird eingeleitet");
+            break;
+        default:
+            ImGui::Text("Unbekannter Status");
+            break;
+        }
+        ImGui::Separator();
+
+        if (ButtonDisablable("Update starten", update_interfrace.file_names.size() < 1 || update_interfrace.in_progress) && !update_interfrace.in_progress)
         {
             update_interfrace.file_name = update_interfrace.file_names[selected_file_index];
             update_interfrace.type = m_update_type;
@@ -590,42 +646,14 @@ void GUI::drawUpdateInfo()
             update_interfrace.do_update = true;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Schließen"))
+        if (ButtonDisablable("Update abbrechen", update_interfrace.status != MCAN_UPDATE_INIT && update_interfrace.status != MCAN_UPDATE_IN_PROGRESS) && update_interfrace.in_progress)
+            update_interfrace.do_abort = true;
+        ImGui::SameLine();
+        if (ButtonDisablable("Schließen", update_interfrace.in_progress))
         {
-            if (!update_interfrace.in_progress)
-            {
-                m_draw_updater = false;
-                update_interfrace.status = 0;
-            }
+            m_draw_updater = false;
+            update_interfrace.status = 0;
         }
-
-        if (update_interfrace.status > 0)
-        {
-            ImGui::Separator();
-            ImGui::ProgressBar(update_interfrace.progress);
-            switch (update_interfrace.status)
-            {
-            case MCAN_UPDATE_IN_PROGRESS: 
-                ImGui::Text("Update im gange...");
-                break;
-            case MCAN_UPDATE_FAILURE_ERROR:
-                ImGui::Text("Update wegen eines Fehlers abgebrochen");
-                break;
-            case MCAN_UPDATE_FAILURE_INCOMPATIBLE:
-                ImGui::Text("Updater inkompatibel zum Bootloader");
-                break;
-            case MCAN_UPDATE_SUCCESS:
-                ImGui::Text("Update erfolgreich abgeschlossen");
-                break;
-            default:
-                ImGui::Text("Unbekannter Status");
-                break;
-            }
-            if (ImGui::Button("Abbrechen") && update_interfrace.in_progress)
-                update_interfrace.do_abort = true;
-        }
-            
-
     }
     ImGui::End();
 }
