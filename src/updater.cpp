@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * updater.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-07.1]
+ * Commit: [2022-03-07.2]
  */
 
 #include "updater.h"
@@ -394,6 +394,12 @@ int MCANUpdater::startUpdate(uint32_t _uid, uint16_t _type, std::string _file_na
 	m_frameOutQueue.push(newCanFrame(0x40, 0, 4, tmp_data));
 
 	return MCAN_UPDATE_INIT;
+}
+
+void MCANUpdater::repeatUpdateOffer()
+{
+	uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0,0,0,0 };
+	m_frameOutQueue.push(newCanFrame(0x40, 0, 4, tmp_data));
 }
 
 int MCANUpdater::abortUpdate()

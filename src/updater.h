@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * updater.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-06.1]
+ * Commit: [2022-03-07.2]
  */
 
 #pragma once
@@ -53,6 +53,8 @@ public:
 	static void getFileNames(std::vector<std::string>& _file_names);
 
 	static int startUpdate(uint32_t _uid, uint16_t _type, std::string _file_name);
+
+	static void repeatUpdateOffer();
 
 	static int abortUpdate();
 

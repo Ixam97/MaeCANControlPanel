@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * main.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-07.1]
+ * Commit: [2022-03-07.2]
  */
 
 #include "can.h"
@@ -61,6 +61,20 @@ void logicLoop()
                 CAN::addFrameToQueue(newCanFrame(SYS_CMD, 0, 6, i_data), OUTQUEUE);
             }
         }
+
+        // When update started, repeat update offer until aborted or client is found
+        if (update_interfrace.status == MCAN_UPDATE_INIT)
+        {
+            static auto _last_time_sent = std::chrono::high_resolution_clock::now();
+            auto _current_time = std::chrono::high_resolution_clock::now();
+
+            if (_current_time - _last_time_sent > std::chrono::milliseconds(750))
+            {
+                MCANUpdater::repeatUpdateOffer();
+                _last_time_sent = _current_time;
+            }
+        }
+
 
         if (tcp_check_duration.count() >= 5 && global_states.tcp_success)
         {
