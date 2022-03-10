@@ -9,29 +9,21 @@
  * https://github.com/Ixam97
  * ----------------------------------------------------------------------------
  * M‰CAN Control Panel
- * gui.h
+ * guihelpers.h
  * (c)2022 Maximilian Goldschmidt
  * Commit: [2022-03-10.1]
  */
 
-#ifndef GUI_H_
-#define GUI_H_
+#pragma once
+#include "imgui.h"
 
-#include "interface.h"
+bool ButtonDisablable(const char* _label, bool _disable = false);
 
-namespace GUI
+void helpMarker(const char* desc);
+
+ImVec4 byteToColor(unsigned short _byte);
+
+enum CustomWindowFlags_
 {
-
-    void setup(int x_res, int y_res, const char* window_name);
-
-    // Draw the main window an ints sub windows
-    void draw(bool& _exit);
-
-    // Cleanup at program end
-    void cleanup();
-
-    // Get a CAN frame from the internal output buffer
-    bool getFrame(Interface::CanFrame& _frame);
-}
-
-#endif
+    DialogWindowFlag = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize
+};

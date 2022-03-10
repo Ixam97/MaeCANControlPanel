@@ -45,27 +45,30 @@
     <ClCompile Include="src\can.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="src\globals.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
-    <ClCompile Include="src\consoledecoder.cpp">
-      <Filter>headers</Filter>
-    </ClCompile>
-    <ClCompile Include="src\canframe.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
     <ClCompile Include="src\configworker.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="src\updater.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="src\feedbackmonitor.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\busmonitor.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\devicemanager.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\interface.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\guihelpers.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\gui.h">
-      <Filter>headers</Filter>
-    </ClInclude>
-    <ClInclude Include="src\globals.h">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\ini.h">
@@ -101,9 +104,6 @@
     <ClInclude Include="src\can.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\canframe.h">
-      <Filter>headers</Filter>
-    </ClInclude>
     <ClInclude Include="src\configworker.h">
       <Filter>headers</Filter>
     </ClInclude>
@@ -112,6 +112,21 @@
     </ClInclude>
     <ClInclude Include="version.h">
       <Filter>resources</Filter>
+    </ClInclude>
+    <ClInclude Include="src\feedbackmonitor.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\busmonitor.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\devicemanager.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\interface.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\guihelpers.h">
+      <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

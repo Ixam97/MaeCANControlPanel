@@ -11,11 +11,10 @@
  * M‰CAN Control Panel
  * configworker.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-05.1]
+ * Commit: [2022-03-10.1]
  */
 
 #include "configworker.h"
-#include "globals.h"
 
 void ConfigWorker::reset()
 {
@@ -26,13 +25,13 @@ void ConfigWorker::reset()
 
 }
 
-void ConfigWorker::addFrameToQueue(canFrame _frame)
+void ConfigWorker::addFrameToQueue(Interface::CanFrame _frame)
 {
-    if (global_states.tcp_success)
+    if (Interface::ProgramStates::tcp_success)
         m_frameOutQueue.push(_frame);
 }
 
-void ConfigWorker::addFrame(canFrame _frame)
+void ConfigWorker::addFrame(Interface::CanFrame _frame)
 {
     if (!m_busy) return;
 
@@ -139,7 +138,7 @@ void ConfigWorker::addFrame(canFrame _frame)
                         // Add channel to request list
                         readingsRequestInfo new_readings_request = { device_list[i].uid, new_readings_channel.channel_index };
                         readings_request_list.push_back(new_readings_request);
-                        global_states.new_request_list_entry = true;
+                        Interface::ProgramStates::new_request_list_entry = true;
                     }
 
                     // Add new config channel to device
@@ -232,7 +231,7 @@ void ConfigWorker::addFrame(canFrame _frame)
                 if (m_current_index <= (device_list[i].num_config_channels + device_list[i].num_readings_channels))
                 {
                     uint8_t i_data[8] = { (uint8_t)(uid >> 24), (uint8_t)(uid >> 16),(uint8_t)(uid >> 8), (uint8_t)uid, m_current_index, 0,0,0 };
-                    addFrameToQueue(newCanFrame(CMD_CONFIG, 0, 5, i_data));
+                    addFrameToQueue(Interface::CanFrame(CMD_CONFIG, 0, 5, i_data));
                 }
 
                 // Done
@@ -247,7 +246,7 @@ void ConfigWorker::addFrame(canFrame _frame)
     }
 }
 
-bool ConfigWorker::getFrame(canFrame& _frame)
+bool ConfigWorker::getFrame(Interface::CanFrame& _frame)
 {
     if (m_frameOutQueue.size() == 0) return false;
     else {
@@ -264,6 +263,6 @@ void ConfigWorker::workOn(uint32_t _uid)
     uid = _uid;
 
     uint8_t i_data[8] = { (uint8_t)(_uid >> 24), (uint8_t)(_uid >> 16),(uint8_t)(_uid >> 8), (uint8_t)_uid, m_current_index, 0,0,0 };
-    addFrameToQueue(newCanFrame(CMD_CONFIG, 0, 5, i_data));
+    addFrameToQueue(Interface::CanFrame(CMD_CONFIG, 0, 5, i_data));
 
 }

@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * can.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-05.1]
+ * Commit: [2022-03-10.1]
  */
 
 #include "can.h"
@@ -22,8 +22,8 @@ bool CAN::TCPConnect()
     m_return_code = WSAStartup(MAKEWORD(2, 0), &wsa);
 
     if (m_return_code != 0) {
-        logError("Init: startWinsock failed.", m_return_code);
-        global_states.tcp_error_code = m_return_code;
+        Interface::logError("Init: startWinsock failed.", m_return_code);
+        Interface::ProgramStates::tcp_error_code = m_return_code;
         return false;
     }
 
@@ -31,21 +31,21 @@ bool CAN::TCPConnect()
     s = socket(AF_INET, SOCK_STREAM, 0);
     if (s == INVALID_SOCKET) {
         int iErrorCode = WSAGetLastError();
-        logError("Init: Could not create socket.", iErrorCode);
-        global_states.tcp_error_code = iErrorCode;
+        Interface::logError("Init: Could not create socket.", iErrorCode);
+        Interface::ProgramStates::tcp_error_code = iErrorCode;
         return false;
     }
     u_long iMode = 1;
     if (ioctlsocket(s, FIONBIO, &iMode) != NO_ERROR)
     {
-        logError("Init: Could not enter non blocking mode.");
+        Interface::logError("Init: Could not enter non blocking mode.");
         return false;
     }
 
     // Connect TCP socket
 
-    m_port = global_settings.tcp_port;
-    m_ip = global_settings.tcp_ip;
+    m_port = Interface::ProgramSettings::tcp_port;
+    m_ip = Interface::ProgramSettings::tcp_ip;
 
     addr.sin_port = htons(m_port);
     addr.sin_family = AF_INET;
@@ -59,16 +59,16 @@ bool CAN::TCPConnect()
         
         if (iErrorCode == WSAEWOULDBLOCK)
         {
-            logWarn("TCPConnect: Connection in Progress.", iErrorCode);
-            global_states.tcp_error_code = iErrorCode;
+            Interface::logWarn("TCPConnect: Connection in Progress.", iErrorCode);
+            Interface::ProgramStates::tcp_error_code = iErrorCode;
             return true;
         }
-        logError("TCPConnect: Connect failed.", iErrorCode);
+        Interface::logError("TCPConnect: Connect failed.", iErrorCode);
         return false;
     }
-    logInfo("TCPConnect: Connected.");
+    Interface::logInfo("TCPConnect: Connected.");
     uint8_t stopData[] = { 0,0,0,0,0,0,0,0 };
-    canFrame stopFrame(0x00000300, 5, stopData);
+    Interface::CanFrame stopFrame(0x00000300, 5, stopData);
     addFrameToQueue(stopFrame, OUTQUEUE);
     return true;
 }
@@ -76,7 +76,7 @@ bool CAN::TCPConnect()
 void CAN::TCPCheckConnection()
 {
     // Check for lost connection
-    if (global_states.tcp_success)
+    if (Interface::ProgramStates::tcp_success)
     {
         char dummy_buff[1];
         m_return_code = recv(s, dummy_buff, 0,0);
@@ -85,10 +85,10 @@ void CAN::TCPCheckConnection()
             int iErrorCode = WSAGetLastError();
             if (iErrorCode == WSAECONNRESET)
             {
-                logError("TCPCheck: Lost TCP connection.", iErrorCode);
-                global_states.tcp_success = false;
-                global_states.tcp_started = false;
-                global_states.tcp_error_code = iErrorCode;
+                Interface::logError("TCPCheck: Lost TCP connection.", iErrorCode);
+                Interface::ProgramStates::tcp_success = false;
+                Interface::ProgramStates::tcp_started = false;
+                Interface::ProgramStates::tcp_error_code = iErrorCode;
                 closesocket(s);
                 return;
             }
@@ -104,39 +104,39 @@ void CAN::TCPCheckConnection()
             int iErrorCode = WSAGetLastError();
             if (iErrorCode == WSAEISCONN)
             {
-                global_states.tcp_success = true;
-                global_states.connected_ip = m_ip;
-                global_states.connected_port = m_port;
-                global_states.tcp_started = false;
-                global_states.tcp_error_code = 0;
-                logInfo("TCPCheck: Connected.");
+                Interface::ProgramStates::tcp_success = true;
+                Interface::ProgramStates::connected_ip = m_ip;
+                Interface::ProgramStates::connected_port = m_port;
+                Interface::ProgramStates::tcp_started = false;
+                Interface::ProgramStates::tcp_error_code = 0;
+                Interface::logInfo("TCPCheck: Connected.");
                 uint8_t stopData[] = { 0,0,0,0,0,0,0,0 };
-                canFrame stopFrame(0x00000300, 5, stopData);
+                Interface::CanFrame stopFrame(0x00000300, 5, stopData);
                 addFrameToQueue(stopFrame, OUTQUEUE);
                 return;
             }
             else if (iErrorCode == WSAEALREADY)
             {
-                global_states.tcp_error_code = iErrorCode;
+                Interface::ProgramStates::tcp_error_code = iErrorCode;
                 return;
             }
             else if (iErrorCode != WSAEALREADY)
             {
-                global_states.tcp_started = false;
-                global_states.tcp_error_code = iErrorCode;
-                logError("TCPCheck: Connect failed.", iErrorCode);
+                Interface::ProgramStates::tcp_started = false;
+                Interface::ProgramStates::tcp_error_code = iErrorCode;
+                Interface::logError("TCPCheck: Connect failed.", iErrorCode);
             }
         }
         else
         {
-            global_states.tcp_success = true;
-            global_states.connected_ip = m_ip;
-            global_states.connected_port = m_port;
-            global_states.tcp_started = false;
-            global_states.tcp_error_code = 0;
-            logInfo("TCPCheck: Connected.");
+            Interface::ProgramStates::tcp_success = true;
+            Interface::ProgramStates::connected_ip = m_ip;
+            Interface::ProgramStates::connected_port = m_port;
+            Interface::ProgramStates::tcp_started = false;
+            Interface::ProgramStates::tcp_error_code = 0;
+            Interface::logInfo("TCPCheck: Connected.");
             uint8_t stopData[] = { 0,0,0,0,0,0,0,0 };
-            canFrame stopFrame(0x00000300, 5, stopData);
+            Interface::CanFrame stopFrame(0x00000300, 5, stopData);
             addFrameToQueue(stopFrame, OUTQUEUE);
         }
     }
@@ -149,27 +149,27 @@ void CAN::TCPDisconnect()
     if (m_return_code == SOCKET_ERROR)
     {
         int iErrorCode = WSAGetLastError();
-        logError("processQueue: Frame could not be sent.", iErrorCode);
+        Interface::logError("processQueue: Frame could not be sent.", iErrorCode);
     }
 
     m_return_code = closesocket(s);
     if (m_return_code != SOCKET_ERROR)
     {
-        global_states.tcp_success = false;
-        global_states.tcp_started = false;
-        global_states.tcp_error_code = 0;
-        logInfo("TCPDisconnect: Disconnected.");
+        Interface::ProgramStates::tcp_success = false;
+        Interface::ProgramStates::tcp_started = false;
+        Interface::ProgramStates::tcp_error_code = 0;
+        Interface::logInfo("TCPDisconnect: Disconnected.");
     }
     
 }
 
-int CAN::addFrameToQueue(canFrame _frame, bool _b_recframe)
+int CAN::addFrameToQueue(Interface::CanFrame _frame, bool _b_recframe)
 {
     if (_frame.can_hash & 0x300 || (_frame.cmd == CMD_CONFIG && _frame.resp == 1))
     {
         if (_b_recframe == INQUEUE)
             m_frameInQueue.push(_frame);
-        else if (global_states.tcp_success)
+        else if (Interface::ProgramStates::tcp_success)
             m_frameOutQueue.push(_frame);
         return 1;
     }
@@ -182,7 +182,7 @@ int CAN::addFrameToQueue(canFrame _frame, bool _b_recframe)
 
 int CAN::TCPReadFrame()
 {
-    if (global_states.tcp_success)
+    if (Interface::ProgramStates::tcp_success)
     {
         char _buff[13];
 
@@ -200,7 +200,7 @@ int CAN::TCPReadFrame()
             {
                 uint8_t _data[13];
                 memcpy(_data, &_buff[5], 8);
-                canFrame _recFrame(((uint8_t)_buff[0] << 24) | ((uint8_t)_buff[1] << 16) | ((uint8_t)_buff[2] << 8) | (uint8_t)_buff[3], (uint8_t)_buff[4], _data);
+                Interface::CanFrame _recFrame(((uint8_t)_buff[0] << 24) | ((uint8_t)_buff[1] << 16) | ((uint8_t)_buff[2] << 8) | (uint8_t)_buff[3], (uint8_t)_buff[4], _data);
 
                 addFrameToQueue(_recFrame, INQUEUE);
 
@@ -213,10 +213,10 @@ int CAN::TCPReadFrame()
     return 0;
 }
 
-canFrame CAN::processQueue(bool _b_recqueue) 
+Interface::CanFrame CAN::processQueue(bool _b_recqueue)
 {
-    canFrame queuedFrame;
-    if (global_states.tcp_success)
+    Interface::CanFrame queuedFrame;
+    if (Interface::ProgramStates::tcp_success)
     {
         if (_b_recqueue == INQUEUE)
         {
@@ -234,7 +234,7 @@ canFrame CAN::processQueue(bool _b_recqueue)
             if (m_return_code == SOCKET_ERROR)
             {
                 int iErrorCode = WSAGetLastError();
-                logError("processQueue: Frame could not be sent.", iErrorCode);
+                Interface::logError("processQueue: Frame could not be sent.", iErrorCode);
             }                
             m_frameOutQueue.pop();
         }

@@ -11,20 +11,21 @@
  * M‰CAN Control Panel
  * updater.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-07.2]
+ * Commit: [2022-03-10.1]
  */
 
 #pragma once
-
-#include "canframe.h"
-#include "globals.h"
+//#include "canframe.h"
+#include "interface.h"
+#include <vector>
 #include <queue>
+#include <string>
 
 class MCANUpdater
 {
 private:
-	inline static std::queue<canFrame> m_frameInQueue;
-	inline static std::queue<canFrame> m_frameOutQueue;
+	inline static std::queue<Interface::CanFrame> m_frameInQueue;
+	inline static std::queue<Interface::CanFrame> m_frameOutQueue;
 
 	inline static std::vector<uint8_t> m_hexfile_byte_stream;
 
@@ -49,6 +50,23 @@ private:
 	static void sendPage(int _index);
 
 public:
+	
+	struct UpdateInterface
+	{
+		static inline uint32_t uid;
+		static inline uint16_t type;
+		static inline int status;
+		static inline bool do_update = false;
+		static inline bool do_abort = false;
+		static inline bool get_file_names = false;
+		static inline bool in_progress = false;
+		static inline float progress = 0.0f;
+		static inline std::vector<std::string> file_names;
+		static inline std::string file_name;
+
+	};
+	
+
 	// Get file names from file system
 	static void getFileNames(std::vector<std::string>& _file_names);
 
@@ -65,10 +83,10 @@ public:
 	static float getProgress();
 
 	// Pass a frame to the updater
-	static int addFrame(canFrame& _frame);
+	static void addFrame(Interface::CanFrame& _frame);
 
 	// Get a frame the updater wants to send
-	static bool getFrame(canFrame& _frame);
+	static bool getFrame(Interface::CanFrame& _frame);
 };
 
 

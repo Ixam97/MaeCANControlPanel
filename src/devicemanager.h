@@ -9,29 +9,21 @@
  * https://github.com/Ixam97
  * ----------------------------------------------------------------------------
  * M‰CAN Control Panel
- * gui.h
+ * devicemanager.h
  * (c)2022 Maximilian Goldschmidt
  * Commit: [2022-03-10.1]
  */
 
-#ifndef GUI_H_
-#define GUI_H_
-
+#pragma once
 #include "interface.h"
 
-namespace GUI
+namespace DeviceManager 
 {
-
-    void setup(int x_res, int y_res, const char* window_name);
-
-    // Draw the main window an ints sub windows
-    void draw(bool& _exit);
-
-    // Cleanup at program end
-    void cleanup();
-
-    // Get a CAN frame from the internal output buffer
-    bool getFrame(Interface::CanFrame& _frame);
+	inline float voltage = 0.0;
+	inline float current = 0.0;
+	inline bool b_draw = false;
+	void loop();
+	void draw(void* _bold_font, float _scaling);
+	void addFrame(Interface::CanFrame& _frame);
+	bool getFrame(Interface::CanFrame& _frame);
 }
-
-#endif

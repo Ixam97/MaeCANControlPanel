@@ -11,11 +11,10 @@
  * M‰CAN Control Panel
  * updater.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-07.2]
+ * Commit: [2022-03-10.1]
  */
 
 #include "updater.h"
-#include "globals.h"
 #include <fstream>
 #include <filesystem>
 
@@ -26,7 +25,7 @@ int MCANUpdater::hexFileParser(std::string _file_name)
 
 	if (!hexfile.is_open())
 	{
-		logError("hexFileParser: Can't open File.");
+		Interface::logError("hexFileParser: Can't open File.");
 		return PARSE_ERR_FILE_OPEN;
 	}
 
@@ -64,7 +63,7 @@ int MCANUpdater::hexFileParser(std::string _file_name)
 				data_address = std::stoi(s_data_address, NULL, 16);
 				line_type = std::stoi(s_line_type, NULL, 16);
 			}
-			catch (...) { logError("hexFileParser: Parsing error."); hexfile.close(); return PARSE_ERR_CONVERSION; }
+			catch (...) { Interface::logError("hexFileParser: Parsing error."); hexfile.close(); return PARSE_ERR_CONVERSION; }
 			line_checksum = byte_count + (data_address & 0xff) + ((data_address >> 8) & 0xff) + line_type;
 
 			switch (line_type)
@@ -79,7 +78,7 @@ int MCANUpdater::hexFileParser(std::string _file_name)
 					hexfile.get(s_data_byte[1]);
 					uint8_t data_byte;
 					try { data_byte = (uint8_t)std::stoi(s_data_byte, NULL, 16); }
-					catch (...) { logError("hexFileParser: Parsing error."); hexfile.close(); return PARSE_ERR_CONVERSION; }
+					catch (...) { Interface::logError("hexFileParser: Parsing error."); hexfile.close(); return PARSE_ERR_CONVERSION; }
 					line_checksum += data_byte;
 					m_hexfile_byte_stream.push_back(data_byte);
 				}
@@ -94,7 +93,7 @@ int MCANUpdater::hexFileParser(std::string _file_name)
 				// Extended linear address
 			default: 
 				line_checksum = -1;
-				logError("hexFileParser: File is not supported");
+				Interface::logError("hexFileParser: File is not supported");
 				return PARSE_ERR_NOT_SUPPORTED;
 				break;
 			}
@@ -103,11 +102,11 @@ int MCANUpdater::hexFileParser(std::string _file_name)
 			hexfile.get(s_checksum[1]);
 			int checksum;
 			try { checksum = std::stoi(s_checksum, NULL, 16); }
-			catch (...) { logError("hexFileParser: Parsing error."); hexfile.close(); return PARSE_ERR_CONVERSION; }
+			catch (...) { Interface::logError("hexFileParser: Parsing error."); hexfile.close(); return PARSE_ERR_CONVERSION; }
 
 			if ((-line_checksum & 0xff) != checksum && line_checksum > -1)
 			{
-				logError("hexFileParser: Checksum error.");
+				Interface::logError("hexFileParser: Checksum error.");
 				hexfile.close();
 				return PARSE_ERR_CHECKSUM;
 			}
@@ -115,7 +114,7 @@ int MCANUpdater::hexFileParser(std::string _file_name)
 	}
 
 	hexfile.close();
-	logInfo("hexFileParser: HEX file has been parsed successfull!");
+	Interface::logInfo("hexFileParser: HEX file has been parsed successfull!");
 	return 1;
 }
 
@@ -130,14 +129,15 @@ float MCANUpdater::getProgress()
 	else return 0;
 }
 
-int MCANUpdater::addFrame(canFrame& _frame)
+void MCANUpdater::addFrame(Interface::CanFrame& _frame)
 {
 	//m_frameInQueue.push(_frame);
 
-	if (getUidFromData(_frame.data) != m_uid || _frame.resp == 0) {
+	if (Interface::getUidFromData(_frame.data) != m_uid || _frame.resp == 0) {
 		m_busy = false;
-		logError("MCANUpdater: Detected conflicting update, abort.");
-		return MCAN_UPDATE_FAILURE_ERROR;
+		Interface::logError("MCANUpdater: Detected conflicting update, abort.");
+		UpdateInterface::status = MCAN_UPDATE_FAILURE_ERROR;
+		return;
 	}
 
 	int return_code = MCAN_UPDATE_FAILURE_ERROR;
@@ -163,19 +163,19 @@ int MCANUpdater::addFrame(canFrame& _frame)
 			m_legacy = true;
 			m_reported_type = _frame.data[5];
 			return_code = MCAN_UPDATE_IN_PROGRESS;
-			logInfo("MCANUpdater: Beginning update in Legacy Mode");
+			Interface::logInfo("MCANUpdater: Beginning update in Legacy Mode");
 		}
 		else if (_frame.dlc == 7)
 		{
 			if (_frame.data[6] > 0)
 			{
 				m_legacy = false;
-				logInfo("MCANUpdater: Beginning update");
+				Interface::logInfo("MCANUpdater: Beginning update");
 			}
 			else
 			{
 				m_legacy = true;
-				logInfo("MCANUpdater: Beginning update in Legacy Mode");
+				Interface::logInfo("MCANUpdater: Beginning update in Legacy Mode");
 			}
 			m_reported_type = _frame.data[5];
 			return_code = MCAN_UPDATE_IN_PROGRESS;
@@ -224,7 +224,7 @@ int MCANUpdater::addFrame(canFrame& _frame)
 				{
 					// Update completed
 					uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0x07, (uint8_t)m_type, 0,0 };
-					m_frameOutQueue.push(newCanFrame(0x40, 0, 6, tmp_data));
+					m_frameOutQueue.push(Interface::CanFrame(0x40, 0, 6, tmp_data));
 					return_code = MCAN_UPDATE_SUCCESS;
 					m_progress = 1.0f;
 					m_busy = false;
@@ -256,7 +256,7 @@ int MCANUpdater::addFrame(canFrame& _frame)
 			{
 				// Update completed
 				uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0x07, (uint8_t)m_type, 0,0 };
-				m_frameOutQueue.push(newCanFrame(0x40, 0, 6, tmp_data));
+				m_frameOutQueue.push(Interface::CanFrame(0x40, 0, 6, tmp_data));
 				return_code = MCAN_UPDATE_SUCCESS;
 				m_busy = false;
 			}
@@ -288,31 +288,31 @@ int MCANUpdater::addFrame(canFrame& _frame)
 			// Confirmed compatibility, continue with update
 			m_compatibility = true;
 			uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid , 0x01, (uint8_t)m_type, 0x01,0 };
-			m_frameOutQueue.push(newCanFrame(0x40, 1, 7, tmp_data));
+			m_frameOutQueue.push(Interface::CanFrame(0x40, 1, 7, tmp_data));
 			sendPage(0);
 		}
 		else 
 		{
 			// Abort
 			uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid , 0x01, (uint8_t)m_type, 0x00,0 };
-			m_frameOutQueue.push(newCanFrame(0x40, 1, 7, tmp_data));
+			m_frameOutQueue.push(Interface::CanFrame(0x40, 1, 7, tmp_data));
 		}
 	}
 
 	if (return_code == MCAN_UPDATE_FAILURE_ERROR)
 	{
 		uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid , 0x06, 0,0,0 };
-		m_frameOutQueue.push(newCanFrame(0x40, 1, 5, tmp_data));
-		logError("MCANUpdater: Failed to do update.");
+		m_frameOutQueue.push(Interface::CanFrame(0x40, 1, 5, tmp_data));
+		Interface::logError("MCANUpdater: Failed to do update.");
 	}
 	else if (return_code == MCAN_UPDATE_FAILURE_INCOMPATIBLE)
-		logWarn("MCANUpdater: Detected incompatibility between update file and CAN device.");
+		Interface::logWarn("MCANUpdater: Detected incompatibility between update file and CAN device.");
 	else if (return_code == MCAN_UPDATE_SUCCESS)
 	{
-		logInfo("MCANUpdater: Update successfull.");
+		Interface::logInfo("MCANUpdater: Update successfull.");
 		m_busy = false;
 	}
-	return return_code;
+	UpdateInterface::status = return_code;
 }
 
 void MCANUpdater::sendPage(int _index)
@@ -320,12 +320,12 @@ void MCANUpdater::sendPage(int _index)
 	if (m_legacy)
 	{
 		uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0x04, (uint8_t)_index, 0,0 };
-		m_frameOutQueue.push(newCanFrame(0x40, 0, 6, tmp_data));
+		m_frameOutQueue.push(Interface::CanFrame(0x40, 0, 6, tmp_data));
 	}
 	else
 	{
 		uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0x14, (uint8_t)(_index >> 8), (uint8_t)_index,0 };
-		m_frameOutQueue.push(newCanFrame(0x40, 0, 7, tmp_data));
+		m_frameOutQueue.push(Interface::CanFrame(0x40, 0, 7, tmp_data));
 	}
 
 	for (int i = 0; i < m_page_size / 8; i++)
@@ -336,23 +336,23 @@ void MCANUpdater::sendPage(int _index)
 			if ((_index * m_page_size) + i * 8 + j >= m_hexfile_byte_stream.size()) payload_data[j] = 0xff;
 			else payload_data[j] = m_hexfile_byte_stream[(_index * m_page_size) + i * 8 + j];
 		}
-		m_frameOutQueue.push(newCanFrame(0x40, 0, 8, payload_data, 0x300 + i + 1));
+		m_frameOutQueue.push(Interface::CanFrame(0x40, 0, 8, payload_data, 0x300 + i + 1));
 	}
 
 	if (m_legacy)
 	{
 		uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0x05, (uint8_t)_index, 0,0 };
-		m_frameOutQueue.push(newCanFrame(0x40, 0, 6, tmp_data));
+		m_frameOutQueue.push(Interface::CanFrame(0x40, 0, 6, tmp_data));
 	}
 	else
 	{
 		uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0x15, (uint8_t)(_index >> 8), (uint8_t)_index,0 };
-		m_frameOutQueue.push(newCanFrame(0x40, 0, 7, tmp_data));
+		m_frameOutQueue.push(Interface::CanFrame(0x40, 0, 7, tmp_data));
 	}
 
 }
 
-bool MCANUpdater::getFrame(canFrame& _frame)
+bool MCANUpdater::getFrame(Interface::CanFrame& _frame)
 {
 	if (m_frameOutQueue.size() == 0)
 		return false;
@@ -391,7 +391,7 @@ int MCANUpdater::startUpdate(uint32_t _uid, uint16_t _type, std::string _file_na
 	hexFileParser(_file_name);
 
 	uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0,0,0,0 };
-	m_frameOutQueue.push(newCanFrame(0x40, 0, 4, tmp_data));
+	m_frameOutQueue.push(Interface::CanFrame(0x40, 0, 4, tmp_data));
 
 	return MCAN_UPDATE_INIT;
 }
@@ -399,7 +399,7 @@ int MCANUpdater::startUpdate(uint32_t _uid, uint16_t _type, std::string _file_na
 void MCANUpdater::repeatUpdateOffer()
 {
 	uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid, 0,0,0,0 };
-	m_frameOutQueue.push(newCanFrame(0x40, 0, 4, tmp_data));
+	m_frameOutQueue.push(Interface::CanFrame(0x40, 0, 4, tmp_data));
 }
 
 int MCANUpdater::abortUpdate()
@@ -413,7 +413,7 @@ int MCANUpdater::abortUpdate()
 	m_compatibility = false;
 
 	uint8_t tmp_data[8] = { (uint8_t)(m_uid >> 24), (uint8_t)(m_uid >> 16), (uint8_t)(m_uid >> 8), (uint8_t)m_uid , 0x06, 0,0,0 };
-	m_frameOutQueue.push(newCanFrame(0x40, 1, 5, tmp_data));
+	m_frameOutQueue.push(Interface::CanFrame(0x40, 1, 5, tmp_data));
 
 	return MCAN_UPDATE_IDLE;
 }

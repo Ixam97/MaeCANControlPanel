@@ -11,10 +11,10 @@
  * M‰CAN Control Panel
  * configworker.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-05.1]
+ * Commit: [2022-03-10.1]
  */
 
-#include "canframe.h"
+#include "interface.h"
 #include <vector>
 #include <queue>
 
@@ -22,13 +22,68 @@
 class ConfigWorker
 {
 private:
-    static inline std::vector<canFrame> m_frameInVector;
-    static inline std::queue<canFrame> m_frameOutQueue;
+    static inline std::vector<Interface::CanFrame> m_frameInVector;
+    static inline std::queue<Interface::CanFrame> m_frameOutQueue;
     static inline uint8_t m_current_index = 0;
     static inline bool m_busy = false;
 
-    static void addFrameToQueue(canFrame _frame);
+    static void addFrameToQueue(Interface::CanFrame _frame);
 public:
+	struct configChannel
+	{
+		uint8_t channel_index;
+		uint16_t type;
+		int current_value;
+		int wanted_value;
+		uint8_t num_options;
+		std::vector<std::string> dropdown_options;
+		std::string dropdown_options_separated_by_zero;
+		std::string label;
+		std::string unit;
+		uint16_t min, max;
+		std::string s_min, s_max;
+		bool request_sent = true;
+	};
+
+	struct readingsChannel
+	{
+		uint8_t channel_index;
+		int16_t current_value;
+		float value_factor;
+		std::string label;
+		std::string unit;
+		int8_t power;
+		uint8_t colors[4];
+		int16_t points[5];
+		std::string s_min, s_max;
+	};
+
+	struct canDevice
+	{
+		std::string name;
+		std::string item;
+		uint16_t type;
+		uint32_t serialnbr;
+		uint8_t version_h;
+		uint8_t version_l;
+		uint32_t uid;
+		int num_config_channels = -1;
+		int num_readings_channels;
+		std::vector<configChannel> vec_config_channels;
+		std::vector<readingsChannel> vec_readings_channels;
+		bool data_complete = false;
+		bool selected = false;
+	};
+
+	struct readingsRequestInfo
+	{
+		uint32_t uid;
+		uint8_t channel;
+	};
+
+    inline static std::vector<canDevice> device_list;
+    inline static std::vector<readingsRequestInfo> readings_request_list;
+
     static inline uint32_t uid = 0;
 
     static bool busy() { return m_busy; }
@@ -37,10 +92,10 @@ public:
     static void reset();
 
     // add CAN frame to internal input buffer and process it if ready
-    static void addFrame(canFrame _frame);
+    static void addFrame(Interface::CanFrame _frame);
 
     // get CAN frame from internal output buffer
-    static bool getFrame(canFrame& _frame);
+    static bool getFrame(Interface::CanFrame& _frame);
 
     // Define a device to get config from
     static void workOn(uint32_t _uid);

@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * can.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-05.1]
+ * Commit: [2022-03-10.1]
  */
 
 #pragma once
@@ -24,14 +24,13 @@
 #include <queue>
 #include <vector>
 
-#include "globals.h"
-#include "canframe.h"
+#include "interface.h"
 
 class CAN 
 {
 private:
-    static inline std::queue<canFrame> m_frameOutQueue;
-    static inline std::queue<canFrame> m_frameInQueue;
+    static inline std::queue<Interface::CanFrame> m_frameOutQueue;
+    static inline std::queue<Interface::CanFrame> m_frameInQueue;
     static inline long m_return_code = 0;
     static inline SOCKET s;
     static inline SOCKADDR_IN addr;
@@ -58,13 +57,13 @@ public:
 
     // Process the queue of CAN frames to be sent
     // bool _b_recque: Determine which queue to process. OUTQUEUE or INQUEUE 
-    // Returns the oldest canFrame from the queue
-    static canFrame processQueue(bool _b_recqueue);
+    // Returns the oldest CanFrame from the queue
+    static Interface::CanFrame processQueue(bool _b_recqueue);
 
     // Add a CAN fram to the queue
-    // canFrame _frame : Can frame to be added
+    // CanFrame _frame : Can frame to be added
     // bool _b_recframe: OUTQUEUE or INQUEUE
-    static int addFrameToQueue(canFrame _frame, bool _b_recframe);
+    static int addFrameToQueue(Interface::CanFrame _frame, bool _b_recframe);
 
     static size_t getQueueLength(bool _b_recqueue);
 };

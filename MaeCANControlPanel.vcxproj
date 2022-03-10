@@ -299,6 +299,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\busmonitor.cpp" />
     <ClCompile Include="src\configworker.cpp" />
     <ClCompile Include="include\ImGuiDocking\imgui.cpp" />
     <ClCompile Include="include\ImGuiDocking\imgui_demo.cpp" />
@@ -308,13 +309,16 @@
     <ClCompile Include="include\ImGuiDocking\imgui_tables.cpp" />
     <ClCompile Include="include\ImGuiDocking\imgui_widgets.cpp" />
     <ClCompile Include="src\can.cpp" />
-    <ClCompile Include="src\canframe.cpp" />
+    <ClCompile Include="src\devicemanager.cpp" />
+    <ClCompile Include="src\feedbackmonitor.cpp" />
     <ClCompile Include="src\gui.cpp" />
+    <ClCompile Include="src\guihelpers.cpp" />
+    <ClCompile Include="src\interface.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\globals.cpp" />
     <ClCompile Include="src\updater.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\busmonitor.h" />
     <ClInclude Include="src\configworker.h" />
     <ClInclude Include="include\ImGuiDocking\imconfig.h" />
     <ClInclude Include="include\ImGuiDocking\imgui.h" />
@@ -326,13 +330,12 @@
     <ClInclude Include="include\ImGuiDocking\imstb_truetype.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\can.h" />
-    <ClInclude Include="src\canframe.h" />
-    <ClCompile Include="src\consoledecoder.cpp">
-      <FileType>CppHeader</FileType>
-    </ClCompile>
+    <ClInclude Include="src\devicemanager.h" />
+    <ClInclude Include="src\feedbackmonitor.h" />
     <ClInclude Include="src\gui.h" />
+    <ClInclude Include="src\guihelpers.h" />
     <ClInclude Include="src\ini.h" />
-    <ClInclude Include="src\globals.h" />
+    <ClInclude Include="src\interface.h" />
     <ClInclude Include="src\updater.h" />
     <ClInclude Include="version.h" />
   </ItemGroup>
