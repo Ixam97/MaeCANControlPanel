@@ -11,10 +11,10 @@
  * M‰CAN Control Panel
  * interface.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-10.1]
+ * Commit: [2022-03-17.1]
  */
 
-#include "interface.h"
+#include "globals.h"
 #include "ini.h"
 
 #define GLOBAL_SETTING_LOAD ini.get("global-settings")
@@ -23,7 +23,7 @@
 mINI::INIFile ini_file("MaeCANControlPanelSettings.ini");
 mINI::INIStructure ini;
 
-namespace Interface 
+namespace Globals 
 {
 	CanFrame::CanFrame(uint8_t _cmd, uint8_t _resp, uint8_t _dlc, uint8_t _data[8], uint16_t _hash)
 	{

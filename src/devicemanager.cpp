@@ -11,8 +11,11 @@
  * M‰CAN Control Panel
  * devicemanager.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-10.1]
+ * Commit: [2022-03-17.1]
  */
+
+#define T_SLIDER 1
+#define T_DROPDOWN 2
 
 #include "devicemanager.h"
 #include "configworker.h"
@@ -29,7 +32,7 @@ uint16_t m_update_type;
 std::string m_update_name;
 bool m_draw_updater = false;
 
-std::queue<Interface::CanFrame> m_frame_out_queue;
+std::queue<Globals::CanFrame> m_frame_out_queue;
 
 namespace DeviceManager 
 {
@@ -42,14 +45,14 @@ namespace DeviceManager
         std::chrono::duration<double> request_duration = now_time - last_request_time;
 
         // Request readings channel info in regular intervals or if new entry was added to the request list.
-        if (Interface::ProgramStates::new_request_list_entry || (request_duration.count() >= Interface::ProgramSettings::request_interval))
+        if (Globals::ProgramStates::new_request_list_entry || (request_duration.count() >= Globals::ProgramSettings::request_interval))
         {
-            Interface::ProgramStates::new_request_list_entry = false;
+            Globals::ProgramStates::new_request_list_entry = false;
             last_request_time = now_time;
             for (ConfigWorker::readingsRequestInfo n : ConfigWorker::readings_request_list)
             {
                 uint8_t tmp_data[8] = { (uint8_t)(n.uid >> 24), (uint8_t)(n.uid >> 16),(uint8_t)(n.uid >> 8), (uint8_t)n.uid, SYS_STAT, n.channel,0,0 };
-                m_frame_out_queue.push(Interface::CanFrame(SYS_CMD, 0, 6, tmp_data));
+                m_frame_out_queue.push(Globals::CanFrame(CMD_SYS, 0, 6, tmp_data));
             }
         }
 
@@ -80,9 +83,9 @@ namespace DeviceManager
         }
 
         // Reset congfigWorker when device list is cleared
-        if (Interface::ProgramCmds::config_worker_reset)
+        if (Globals::ProgramCmds::config_worker_reset)
         {
-            Interface::ProgramCmds::config_worker_reset = false;
+            Globals::ProgramCmds::config_worker_reset = false;
             ConfigWorker::device_list.resize(0);
             ConfigWorker::readings_request_list.resize(0);
             ConfigWorker::reset();
@@ -121,7 +124,7 @@ namespace DeviceManager
                 if (channel.request_sent == false)
                 {
                     uint8_t tmp_data[8] = { (uint8_t)(device.uid >> 24), (uint8_t)(device.uid >> 16), (uint8_t)(device.uid >> 8), (uint8_t)(device.uid), SYS_STAT, channel.channel_index, (uint8_t)(channel.wanted_value >> 8), (uint8_t)(channel.wanted_value) };
-                    m_frame_out_queue.push(Interface::CanFrame(SYS_CMD, 0, 8, tmp_data));
+                    m_frame_out_queue.push(Globals::CanFrame(CMD_SYS, 0, 8, tmp_data));
                     channel.request_sent = true;
                 }
             }
@@ -131,9 +134,11 @@ namespace DeviceManager
     void draw(void* _bold_font, float _scaling)
     {
 
-        static int current_index = 0;
+        static size_t current_index = 0;
         if (b_draw)
         {
+            if (current_index >= ConfigWorker::device_list.size())
+                current_index = ConfigWorker::device_list.size() - 1;
             if (!ImGui::Begin(u8"Ger‰temanager", &b_draw, ImGuiWindowFlags_NoCollapse))
             {
                 ImGui::End();
@@ -141,12 +146,12 @@ namespace DeviceManager
             }
 
             uint8_t tmp_data[8] = { 0,0,0,0,0,0,0,0 };
-            if (ImGui::Button("Ping")) m_frame_out_queue.push(Interface::CanFrame(CMD_PING, 0, 0, tmp_data));
+            if (ImGui::Button("Ping")) m_frame_out_queue.push(Globals::CanFrame(CMD_PING, 0, 0, tmp_data));
             ImGui::SameLine();
             if (ImGui::Button(u8"Liste zur¸cksetzen"))
             {
                 current_index = 0;
-                Interface::ProgramCmds::config_worker_reset = true;
+                Globals::ProgramCmds::config_worker_reset = true;
             }
 
             ImGui::Separator();
@@ -175,30 +180,42 @@ namespace DeviceManager
             {
                 if (ConfigWorker::device_list.size() > 0 && ConfigWorker::device_list[current_index].data_complete)
                 {
+                    auto& device = ConfigWorker::device_list[current_index];
+                    bool b_is_not_mcan = !(device.type == 0x51 || device.type == 0x52 || device.type == 0x53 || device.type == 0x54 || device.type == 0x70);
                     ImGui::PushFont((ImFont*)_bold_font);
-                    ImGui::Text(ConfigWorker::device_list[current_index].name.c_str());
+                    ImGui::Text(device.name.c_str());
                     ImGui::PopFont();
                     ImGui::Separator();
-                    ImGui::Text("Artikelnummer: %s ", ConfigWorker::device_list[current_index].item.c_str());
-                    ImGui::Text("Seriennummer: %d", ConfigWorker::device_list[current_index].serialnbr);
-                    ImGui::Text("Version: %d.%d", ConfigWorker::device_list[current_index].version_h, ConfigWorker::device_list[current_index].version_l);
-                    ImGui::Text("UID: 0x%08X", ConfigWorker::device_list[current_index].uid);
-                    ImGui::Text(u8"Konfigurationskan‰le: %d, Messwertkan‰le: %d", ConfigWorker::device_list[current_index].num_config_channels, ConfigWorker::device_list[current_index].num_readings_channels);
+                    ImGui::Text("Artikelnummer: %s ", device.item.c_str());
+                    ImGui::Text("Seriennummer: %d", device.serialnbr);
+                    ImGui::Text("Version: %d.%d", device.version_h, device.version_l);
+                    ImGui::Text("UID: 0x%08X", device.uid);
+                    ImGui::Text(u8"Konfigurationskan‰le: %d, Messwertkan‰le: %d", device.num_config_channels, device.num_readings_channels);
 
-                    if (ImGui::Button("Update")) {
-                        m_update_uid = ConfigWorker::device_list[current_index].uid;
-                        m_update_type = ConfigWorker::device_list[current_index].type;
-                        m_update_name = ConfigWorker::device_list[current_index].name;
-                        //MCANUpdater::setParameters(ConfigWorker::device_list[current_index].uid, ConfigWorker::device_list[current_index].type, ConfigWorker::device_list[current_index].name);
+                    if (ButtonDisablable("Update", b_is_not_mcan)) {
+                        m_update_uid = device.uid;
+                        m_update_type = device.type;
+                        m_update_name = device.name;
                         m_draw_updater = true;
                     }
                     ImGui::SameLine();
-                    ButtonDisablable(u8"Aus Liste lˆschen", true);
-
-                    if (ConfigWorker::device_list[current_index].num_readings_channels > 0)
+                    if (ButtonDisablable("Reset", b_is_not_mcan))
+                    {
+                        uint32_t& tmp_uid = device.uid;
+                        uint8_t tmp_data[8] = {(uint8_t)(tmp_uid >> 24), (uint8_t)(tmp_uid >> 16), (uint8_t)(tmp_uid >> 8), (uint8_t)(tmp_uid), 0,0,0,0};
+                        m_frame_out_queue.push(Globals::CanFrame(CMD_MCAN_BOOT, 0, 4, tmp_data));
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button(u8"Aus Liste lˆschen"))
+                    {
+                        ConfigWorker::removeFromDeviceList(current_index);
+                        if (current_index >= ConfigWorker::device_list.size())
+                            current_index--;
+                    }
+                    if (device.num_readings_channels > 0)
                     {
                         ImGui::Separator();
-                        for (ConfigWorker::readingsChannel n : ConfigWorker::device_list[current_index].vec_readings_channels)
+                        for (ConfigWorker::readingsChannel n : device.vec_readings_channels)
                         {
                             float true_value = (n.current_value * n.value_factor) + std::stof(n.s_min);
                             float relative_value = (true_value - std::stof(n.s_min)) / (std::stof(n.s_max) - std::stof(n.s_min));
@@ -212,25 +229,25 @@ namespace DeviceManager
                             ImGui::PopStyleColor();
                         }
                     }
-                    if (ConfigWorker::device_list[current_index].num_config_channels > 0)
+                    if (device.num_config_channels > 0)
                     {
                         ImGui::Separator();
-                        for (int i = 0; i < ConfigWorker::device_list[current_index].vec_config_channels.size(); i++)
+                        for (int i = 0; i < device.vec_config_channels.size(); i++)
                         {
                             //if (n.unit == "") ImGui::Text("%s", n.label.c_str());
                             //else ImGui::Text("%s (%s)", n.label.c_str(), n.unit.c_str());
 
                             // Drop down
-                            if (ConfigWorker::device_list[current_index].vec_config_channels[i].type == 1)
+                            if (device.vec_config_channels[i].type == 1)
                             {
-                                if (ImGui::Combo(ConfigWorker::device_list[current_index].vec_config_channels[i].label.c_str(), &(ConfigWorker::device_list[current_index].vec_config_channels[i].wanted_value), ConfigWorker::device_list[current_index].vec_config_channels[i].dropdown_options_separated_by_zero.c_str()))
-                                    ConfigWorker::device_list[current_index].vec_config_channels[i].request_sent = false;
+                                if (ImGui::Combo(device.vec_config_channels[i].label.c_str(), &(device.vec_config_channels[i].wanted_value), device.vec_config_channels[i].dropdown_options_separated_by_zero.c_str()))
+                                    device.vec_config_channels[i].request_sent = false;
                             }
                             // Int slider
-                            else if (ConfigWorker::device_list[current_index].vec_config_channels[i].type == 2)
+                            else if (device.vec_config_channels[i].type == 2)
                             {
-                                if (ImGui::SliderInt(ConfigWorker::device_list[current_index].vec_config_channels[i].label.c_str(), &(ConfigWorker::device_list[current_index].vec_config_channels[i].wanted_value), ConfigWorker::device_list[current_index].vec_config_channels[i].min, ConfigWorker::device_list[current_index].vec_config_channels[i].max))
-                                    ConfigWorker::device_list[current_index].vec_config_channels[i].request_sent = false;
+                                if (ImGui::SliderInt(device.vec_config_channels[i].label.c_str(), &(device.vec_config_channels[i].wanted_value), device.vec_config_channels[i].min, device.vec_config_channels[i].max))
+                                    device.vec_config_channels[i].request_sent = false;
                                 ImGui::SameLine(); helpMarker("STRG + Klick, um Zahlenwerte einzugeben.");
                             }
                         }
@@ -325,14 +342,14 @@ namespace DeviceManager
         ImGui::End();
     }
 
-    void addFrame(Interface::CanFrame& _frame)
+    void addFrame(Globals::CanFrame& _frame)
     {
-        if (_frame.cmd == SYS_CMD)
+        if (_frame.cmd == CMD_SYS)
         {
             // Reading/Config value response
             if (_frame.resp == 1 && _frame.dlc == 8 && _frame.data[4] == SYS_STAT)
             {
-                uint32_t i_uid = Interface::getUidFromData(_frame.data);
+                uint32_t i_uid = Globals::getUidFromData(_frame.data);
 
                 for (ConfigWorker::canDevice& device : ConfigWorker::device_list)
                 {
@@ -366,7 +383,7 @@ namespace DeviceManager
             // Config value request
             if (_frame.resp == 0 && _frame.dlc == 8 && _frame.data[4] == SYS_STAT)
             {
-                uint32_t i_uid = Interface::getUidFromData(_frame.data);
+                uint32_t i_uid = Globals::getUidFromData(_frame.data);
 
                 for (int i = 0; i < ConfigWorker::device_list.size(); i++)
                 {
@@ -388,7 +405,7 @@ namespace DeviceManager
             // Config value confirmation
             if (_frame.resp == 1 && _frame.dlc == 7 && _frame.data[4] == SYS_STAT)
             {
-                uint32_t i_uid = Interface::getUidFromData(_frame.data);
+                uint32_t i_uid = Globals::getUidFromData(_frame.data);
 
                 for (int i = 0; i < ConfigWorker::device_list.size(); i++)
                 {
@@ -419,7 +436,7 @@ namespace DeviceManager
                 bool i_known_device = false;
                 for (ConfigWorker::canDevice n : ConfigWorker::device_list)
                 {
-                    if (n.uid == Interface::getUidFromData(_frame.data))
+                    if (n.uid == Globals::getUidFromData(_frame.data))
                     {
                         i_known_device = true;
                         break;
@@ -430,7 +447,7 @@ namespace DeviceManager
                 {
                     // Add device to device list
                     ConfigWorker::canDevice i_new_device;
-                    i_new_device.uid = Interface::getUidFromData(_frame.data);
+                    i_new_device.uid = Globals::getUidFromData(_frame.data);
                     i_new_device.version_h = _frame.data[4];
                     i_new_device.version_l = _frame.data[5];
                     i_new_device.type = (_frame.data[6] << 8) | _frame.data[7];
@@ -446,9 +463,9 @@ namespace DeviceManager
             MCANUpdater::addFrame(_frame);
     }
 
-    bool getFrame(Interface::CanFrame& _frame)
+    bool getFrame(Globals::CanFrame& _frame)
     {
-        Interface::CanFrame tmp_frame;
+        Globals::CanFrame tmp_frame;
         while (ConfigWorker::getFrame(tmp_frame))
             m_frame_out_queue.push(tmp_frame);
         while (MCANUpdater::getFrame(tmp_frame))

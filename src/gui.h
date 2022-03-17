@@ -11,13 +11,13 @@
  * M‰CAN Control Panel
  * gui.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-10.1]
+ * Commit: [2022-03-17.1]
  */
 
 #ifndef GUI_H_
 #define GUI_H_
 
-#include "interface.h"
+#include "globals.h"
 
 namespace GUI
 {
@@ -31,7 +31,7 @@ namespace GUI
     void cleanup();
 
     // Get a CAN frame from the internal output buffer
-    bool getFrame(Interface::CanFrame& _frame);
+    bool getFrame(Globals::CanFrame& _frame);
 }
 
 #endif

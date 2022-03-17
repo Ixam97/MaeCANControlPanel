@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * configworker.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-10.1]
+ * Commit: [2022-03-17.1]
  */
 
 #include "configworker.h"
@@ -24,14 +24,60 @@ void ConfigWorker::reset()
     m_busy = false;
 
 }
-
-void ConfigWorker::addFrameToQueue(Interface::CanFrame _frame)
+void ConfigWorker::removeFromReadingsRequestList(uint32_t _uid)
 {
-    if (Interface::ProgramStates::tcp_success)
+    int index = 0;
+    for (auto n : readings_request_list)
+    {
+        if (n.uid == _uid)
+        {
+            if (index >= readings_request_list.size() || index < 0)
+                return;
+
+            if (index == readings_request_list.size() - 1)
+            {
+                readings_request_list.pop_back();
+                return;
+            }
+
+            for (int i = index; i < readings_request_list.size() - 1; i++)
+            {
+                readings_request_list[i] = readings_request_list[i + 1];
+            }
+            readings_request_list.pop_back();
+        }
+        else 
+            index++;
+    }
+}
+
+void ConfigWorker::removeFromDeviceList(size_t _index)
+{
+    removeFromReadingsRequestList(device_list[_index].uid);
+
+    if (_index >= device_list.size() || _index < 0)
+        return;
+
+    if (_index == device_list.size() - 1)
+    {
+        device_list.pop_back();
+        return;
+    }
+
+    for (size_t i = _index; i < device_list.size() - 1; i++)
+    {
+        device_list[i] = device_list[i + 1];
+    }
+    device_list.pop_back();
+}
+
+void ConfigWorker::addFrameToQueue(Globals::CanFrame _frame)
+{
+    if (Globals::ProgramStates::tcp_success)
         m_frameOutQueue.push(_frame);
 }
 
-void ConfigWorker::addFrame(Interface::CanFrame _frame)
+void ConfigWorker::addFrame(Globals::CanFrame _frame)
 {
     if (!m_busy) return;
 
@@ -138,7 +184,7 @@ void ConfigWorker::addFrame(Interface::CanFrame _frame)
                         // Add channel to request list
                         readingsRequestInfo new_readings_request = { device_list[i].uid, new_readings_channel.channel_index };
                         readings_request_list.push_back(new_readings_request);
-                        Interface::ProgramStates::new_request_list_entry = true;
+                        Globals::ProgramStates::new_request_list_entry = true;
                     }
 
                     // Add new config channel to device
@@ -231,7 +277,7 @@ void ConfigWorker::addFrame(Interface::CanFrame _frame)
                 if (m_current_index <= (device_list[i].num_config_channels + device_list[i].num_readings_channels))
                 {
                     uint8_t i_data[8] = { (uint8_t)(uid >> 24), (uint8_t)(uid >> 16),(uint8_t)(uid >> 8), (uint8_t)uid, m_current_index, 0,0,0 };
-                    addFrameToQueue(Interface::CanFrame(CMD_CONFIG, 0, 5, i_data));
+                    addFrameToQueue(Globals::CanFrame(CMD_CONFIG, 0, 5, i_data));
                 }
 
                 // Done
@@ -246,7 +292,7 @@ void ConfigWorker::addFrame(Interface::CanFrame _frame)
     }
 }
 
-bool ConfigWorker::getFrame(Interface::CanFrame& _frame)
+bool ConfigWorker::getFrame(Globals::CanFrame& _frame)
 {
     if (m_frameOutQueue.size() == 0) return false;
     else {
@@ -263,6 +309,6 @@ void ConfigWorker::workOn(uint32_t _uid)
     uid = _uid;
 
     uint8_t i_data[8] = { (uint8_t)(_uid >> 24), (uint8_t)(_uid >> 16),(uint8_t)(_uid >> 8), (uint8_t)_uid, m_current_index, 0,0,0 };
-    addFrameToQueue(Interface::CanFrame(CMD_CONFIG, 0, 5, i_data));
+    addFrameToQueue(Globals::CanFrame(CMD_CONFIG, 0, 5, i_data));
 
 }

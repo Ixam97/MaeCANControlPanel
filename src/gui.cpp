@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * gui.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-10.1]
+ * Commit: [2022-03-17.1]
  */
 
 #include "gui.h"
@@ -41,7 +41,7 @@ namespace GUI
     ImFont* m_bold_font = nullptr;
     ImFont* m_consolas = nullptr;
 
-    std::queue<Interface::CanFrame> m_frameOutQueue;
+    std::queue<Globals::CanFrame> m_frameOutQueue;
 
     int m_x_res, m_y_res = 0;
 
@@ -65,16 +65,13 @@ namespace GUI
     void newFrame();
     void render();
 
-    void addFrameToQueue(Interface::CanFrame _frame);
-    //void helpMarker(const char* desc);
-    //void consoleDecoder(Interface::CanFrame& _frame, bool& _easy_mode);
-    //ImVec4 byteToColor(uint8_t _byte);
+    void addFrameToQueue(Globals::CanFrame _frame);
     void customSytle(ImGuiStyle* dst = NULL);
 
     uint8_t stopData[8] = { 0,0,0,0,0,0,0,0 };
     uint8_t goData[8] = { 0,0,0,0,1,0,0,0 };
-    Interface::CanFrame m_stopFrame(0x00000300, 5, stopData);
-    Interface::CanFrame m_goFrame(0x00000300, 5, goData);
+    Globals::CanFrame m_stopFrame(0x00000300, 5, stopData);
+    Globals::CanFrame m_goFrame(0x00000300, 5, goData);
 
     // --------------------------- //
     // Add new module windows here //
@@ -106,14 +103,10 @@ namespace GUI
 
         SetProcessDPIAware();
         m_scaling = (float)GetDeviceCaps(GetDC(NULL), LOGPIXELSX) / 96;
-
+        Globals::ProgramStates::gui_scaling = m_scaling;
 
         m_x_res = x_res;
         m_y_res = y_res;
-
-        // m_can = _can;
-
-        // Init everything for the UI
 
         // Setup SDL
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
@@ -121,9 +114,6 @@ namespace GUI
             printf("Error: %s\n", SDL_GetError());
             //return false;
         }
-
-        // Setup window
-
         m_window = SDL_CreateWindow(window_name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_x_res, m_y_res, window_flags);
 
         // Setup SDL_Renderer instance
@@ -139,13 +129,8 @@ namespace GUI
         ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         ImGui::GetIO().IniFilename = "MaeCANControlPanelGUI.ini";
 
-
-
-        //ImGuiBackendFlags_PlatformHasViewports
-
         // Setup Dear ImGui style
         customSytle();
-
 
         // Setup Platform/Renderer backends
         ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
@@ -170,10 +155,10 @@ namespace GUI
 
         if (m_exit)
         {
-            if (Interface::ProgramStates::tcp_success)
+            if (Globals::ProgramStates::tcp_success)
             {
                 uint8_t stopData[] = { 0,0,0,0,0,0,0,0 };
-                Interface::CanFrame stopFrame(0x00000300, 5, stopData);
+                Globals::CanFrame stopFrame(0x00000300, 5, stopData);
                 addFrameToQueue(stopFrame);
             }
             _exit = true;
@@ -229,7 +214,7 @@ namespace GUI
         ImGui::SetNextWindowSize(m_main_size);
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-        bool main_window_success = (ImGui::Begin("MainWindow", NULL, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus));
+        bool main_window_success = (ImGui::Begin("MainWindow", NULL, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoDocking));
         ImGui::PopStyleVar();
 
         if (main_window_success)
@@ -264,39 +249,39 @@ namespace GUI
         {
             m_status_size = ImGui::GetWindowSize();
 
-            if (!Interface::ProgramStates::tcp_started && !Interface::ProgramStates::tcp_success)
+            if (!Globals::ProgramStates::tcp_started && !Globals::ProgramStates::tcp_success)
             {
-                if (ImGui::SmallButton("Verbinden")) Interface::ProgramCmds::tcp_connect = true;
+                if (ImGui::SmallButton("Verbinden")) Globals::ProgramCmds::tcp_connect = true;
                 ImGui::SameLine();
 
-                if (Interface::ProgramStates::tcp_error_code == WSAECONNRESET)
+                if (Globals::ProgramStates::tcp_error_code == WSAECONNRESET)
                 {
-                    ImGui::Text("Verbindung zum Host verloren. TCP-Code: %d", Interface::ProgramStates::tcp_error_code);
+                    ImGui::Text("Verbindung zum Host verloren. TCP-Code: %d", Globals::ProgramStates::tcp_error_code);
                 }
-                else if (Interface::ProgramStates::tcp_error_code == WSAEWOULDBLOCK)
+                else if (Globals::ProgramStates::tcp_error_code == WSAEWOULDBLOCK)
                 {
-                    ImGui::Text("Keine Verbindung zum Host möglich. TCP-Code: %d", Interface::ProgramStates::tcp_error_code);
+                    ImGui::Text("Keine Verbindung zum Host möglich. TCP-Code: %d", Globals::ProgramStates::tcp_error_code);
                 }
-                else if (Interface::ProgramStates::tcp_error_code != 0)
+                else if (Globals::ProgramStates::tcp_error_code != 0)
                 {
-                    ImGui::Text("Fehler. TCP-Code: %d", Interface::ProgramStates::tcp_error_code);
+                    ImGui::Text("Fehler. TCP-Code: %d", Globals::ProgramStates::tcp_error_code);
                 }
                 else
                 {
                     ImGui::Text("Nicht verbunden.");
                 }
             }
-            else if (Interface::ProgramStates::tcp_started && !Interface::ProgramStates::tcp_success)
+            else if (Globals::ProgramStates::tcp_started && !Globals::ProgramStates::tcp_success)
             {
-                if (ImGui::SmallButton("Trennen")) Interface::ProgramCmds::tcp_disconnect = true;
+                if (ImGui::SmallButton("Trennen")) Globals::ProgramCmds::tcp_disconnect = true;
                 ImGui::SameLine();
-                ImGui::Text("Verbindung wird hergestellt. TCP-Code: %d", Interface::ProgramStates::tcp_error_code);
+                ImGui::Text("Verbindung wird hergestellt. TCP-Code: %d", Globals::ProgramStates::tcp_error_code);
             }
-            else if (Interface::ProgramStates::tcp_success)
+            else if (Globals::ProgramStates::tcp_success)
             {
-                if (ImGui::SmallButton("Trennen")) Interface::ProgramCmds::tcp_disconnect = true;
+                if (ImGui::SmallButton("Trennen")) Globals::ProgramCmds::tcp_disconnect = true;
                 ImGui::SameLine();
-                ImGui::Text("Verbunden mit IP %s, Port %d.", Interface::ProgramStates::connected_ip.c_str(), Interface::ProgramStates::connected_port);
+                ImGui::Text("Verbunden mit IP %s, Port %d.", Globals::ProgramStates::connected_ip.c_str(), Globals::ProgramStates::connected_port);
             }
         }
         ImGui::End();
@@ -308,27 +293,34 @@ namespace GUI
         {
             m_stopgo_size = ImGui::GetWindowSize();
 
-            if (Interface::ProgramStates::tcp_success)
+            if (Globals::ProgramStates::tcp_success)
             {
                 ImGui::Text("Spannung: %.2f V, Strom: %.2f A", DeviceManager::voltage, DeviceManager::current);
                 ImGui::SameLine();
             }
 
-            if (!Interface::ProgramStates::track_power && Interface::ProgramStates::tcp_success) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-            if (!Interface::ProgramStates::track_power && Interface::ProgramStates::tcp_success) ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-            if (ImGui::SmallButton("STOP") && Interface::ProgramStates::tcp_success) addFrameToQueue(m_stopFrame);
-            if (!Interface::ProgramStates::track_power && Interface::ProgramStates::tcp_success) ImGui::PopStyleColor(2);
+            bool b_stop = !Globals::ProgramStates::track_power && Globals::ProgramStates::tcp_success;
+            bool b_go = Globals::ProgramStates::track_power && Globals::ProgramStates::tcp_success;
+
+            if (b_stop)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+            }
+            if (ImGui::SmallButton("STOP") && Globals::ProgramStates::tcp_success) addFrameToQueue(m_stopFrame);
+            if (b_stop) ImGui::PopStyleColor(2);
             ImGui::SameLine();
 
-            if (Interface::ProgramStates::track_power && Interface::ProgramStates::tcp_success) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.00f, 0.60f, 0.10f, 1.00f));
-            if (Interface::ProgramStates::track_power && Interface::ProgramStates::tcp_success) ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.00f, 0.60f, 0.10f, 1.00f));
-            if (ImGui::SmallButton("GO") && Interface::ProgramStates::tcp_success) addFrameToQueue(m_goFrame);
-            if (Interface::ProgramStates::track_power && Interface::ProgramStates::tcp_success) ImGui::PopStyleColor(2);
+            if (b_go)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.00f, 0.60f, 0.10f, 1.00f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.00f, 0.60f, 0.10f, 1.00f));
+            }
+            if (ImGui::SmallButton("GO") && Globals::ProgramStates::tcp_success) addFrameToQueue(m_goFrame);
+            if (b_go) ImGui::PopStyleColor(2);
 
         }
         ImGui::End();
-
-
 
         if (m_draw_settings) drawSettings();
         if (m_draw_info) drawInfo();
@@ -347,7 +339,7 @@ namespace GUI
             return;
         }
         static bool on_open = true;
-        static Interface::ProgramSettings local_settings;
+        static Globals::ProgramSettings local_settings;
 
         if (on_open) {
             on_open = false;
@@ -367,8 +359,6 @@ namespace GUI
 
         ImGui::Separator();
 
-
-
         ImGui::PushFont(m_bold_font);
         ImGui::Text("Trace-Einstellungen");
         ImGui::PopFont();
@@ -381,7 +371,7 @@ namespace GUI
 
         if (ImGui::Button("OK")) {
             local_settings.applySettings();
-            Interface::ProgramSettings::has_changed = true;
+            Globals::ProgramSettings::has_changed = true;
             m_draw_settings = false;
             on_open = true;
         }
@@ -393,10 +383,9 @@ namespace GUI
         ImGui::SameLine();
         if (ImGui::Button("Übernehmen")) {
             local_settings.applySettings();
-            Interface::ProgramSettings::has_changed = true;
+            Globals::ProgramSettings::has_changed = true;
         }
         ImGui::End();
-
     }
 
     void drawInfo()
@@ -419,13 +408,13 @@ namespace GUI
 
     }
 
-    void addFrameToQueue(Interface::CanFrame _frame)
+    void addFrameToQueue(Globals::CanFrame _frame)
     {
-        if (Interface::ProgramStates::tcp_success)
+        if (Globals::ProgramStates::tcp_success)
             m_frameOutQueue.push(_frame);
     }
 
-    bool getFrame(Interface::CanFrame& _frame)
+    bool getFrame(Globals::CanFrame& _frame)
     {
         if (m_frameOutQueue.size() == 0) return false;
         else {
@@ -493,19 +482,6 @@ namespace GUI
         colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
         colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
         colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
-    }
-
-    void helpMarker(const char* desc)
-    {
-        ImGui::TextDisabled("(?)");
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-            ImGui::TextUnformatted(desc);
-            ImGui::PopTextWrapPos();
-            ImGui::EndTooltip();
-        }
     }
 }
 

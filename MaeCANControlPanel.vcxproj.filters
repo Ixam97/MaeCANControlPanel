@@ -60,7 +60,7 @@
     <ClCompile Include="src\devicemanager.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="src\interface.cpp">
+    <ClCompile Include="src\globals.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="src\guihelpers.cpp">
@@ -122,7 +122,7 @@
     <ClInclude Include="src\devicemanager.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\interface.h">
+    <ClInclude Include="src\globals.h">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\guihelpers.h">

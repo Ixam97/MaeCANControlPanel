@@ -11,11 +11,11 @@
  * M‰CAN Control Panel
  * devicemanager.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-10.1]
+ * Commit: [2022-03-17.1]
  */
 
 #pragma once
-#include "interface.h"
+#include "globals.h"
 
 namespace DeviceManager 
 {
@@ -24,6 +24,6 @@ namespace DeviceManager
 	inline bool b_draw = false;
 	void loop();
 	void draw(void* _bold_font, float _scaling);
-	void addFrame(Interface::CanFrame& _frame);
-	bool getFrame(Interface::CanFrame& _frame);
+	void addFrame(Globals::CanFrame& _frame);
+	bool getFrame(Globals::CanFrame& _frame);
 }

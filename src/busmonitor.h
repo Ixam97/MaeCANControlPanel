@@ -11,15 +11,15 @@
  * M‰CAN Control Panel
  * busmonitor.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-10.1]
+ * Commit: [2022-03-17.1]
  */
 
 #pragma once
-#include "interface.h"
+#include "globals.h"
 
 namespace BusMonitor {
 	inline bool b_draw = false;
 	void draw(void* console_font);
-	void addFrame(Interface::CanFrame& _frame);
-	bool getFrame(Interface::CanFrame& _frame);
+	void addFrame(Globals::CanFrame& _frame);
+	bool getFrame(Globals::CanFrame& _frame);
 }

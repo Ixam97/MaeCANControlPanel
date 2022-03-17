@@ -11,10 +11,10 @@
  * M‰CAN Control Panel
  * main.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-10.1]
+ * Commit: [2022-03-17.1]
  */
 
-#include "interface.h"
+#include "globals.h"
 #include "can.h"
 #include "gui.h"
 #include "devicemanager.h"
@@ -39,37 +39,37 @@ void logicLoop()
         static std::chrono::steady_clock::time_point last_tcp_check_time = now_time;
         std::chrono::duration<double> tcp_check_duration = now_time - last_tcp_check_time;
 
-        if (tcp_check_duration.count() >= 5 && Interface::ProgramStates::tcp_success)
+        if (tcp_check_duration.count() >= 5 && Globals::ProgramStates::tcp_success)
         {
             last_tcp_check_time = now_time;
             CAN::TCPCheckConnection();
         }
 
         // Check connection establishment
-        if (Interface::ProgramStates::tcp_started) CAN::TCPCheckConnection();
+        if (Globals::ProgramStates::tcp_started) CAN::TCPCheckConnection();
 
         // Start connection establishment
-        if (Interface::ProgramCmds::tcp_connect) 
+        if (Globals::ProgramCmds::tcp_connect) 
         {
-            Interface::ProgramCmds::tcp_connect = false;
-            Interface::ProgramStates::tcp_started = CAN::TCPConnect();
+            Globals::ProgramCmds::tcp_connect = false;
+            Globals::ProgramStates::tcp_started = CAN::TCPConnect();
         }
 
         // Disconnect
-        if (Interface::ProgramCmds::tcp_disconnect) 
+        if (Globals::ProgramCmds::tcp_disconnect) 
         {
-            Interface::ProgramCmds::tcp_disconnect = false;
+            Globals::ProgramCmds::tcp_disconnect = false;
             CAN::TCPDisconnect();
         }        
 
         // Save settings after they changed
-        if (Interface::ProgramSettings::has_changed)
+        if (Globals::ProgramSettings::has_changed)
         {
-            if (Interface::ProgramSettings::trace) ShowWindow(consoleWindow, SW_SHOW);
+            if (Globals::ProgramSettings::trace) ShowWindow(consoleWindow, SW_SHOW);
 #ifndef _DEBUG
             else ShowWindow(consoleWindow, SW_HIDE);
 #endif
-            Interface::writeIni();
+            Globals::writeIni();
         }
 
         // Put new frames into queue
@@ -78,16 +78,16 @@ void logicLoop()
         // Get new incoming frame from queue and pass to modules
         if (CAN::getQueueLength(INQUEUE))
         {
-            Interface::CanFrame new_in_frame = CAN::processQueue(INQUEUE);
+            Globals::CanFrame new_in_frame = CAN::processQueue(INQUEUE);
 
             BusMonitor::addFrame(new_in_frame);
             DeviceManager::addFrame(new_in_frame);
             FeedbackMonitor::addFrame(new_in_frame);
 
-            if (new_in_frame.cmd == SYS_CMD &&new_in_frame.resp == 1 && new_in_frame.dlc == 5)
+            if (new_in_frame.cmd == CMD_SYS &&new_in_frame.resp == 1 && new_in_frame.dlc == 5)
             {
-                if (new_in_frame.data[4] == SYS_GO) Interface::ProgramStates::track_power = true;
-                else if (new_in_frame.data[4] == SYS_STOP) Interface::ProgramStates::track_power = false;
+                if (new_in_frame.data[4] == SYS_GO) Globals::ProgramStates::track_power = true;
+                else if (new_in_frame.data[4] == SYS_STOP) Globals::ProgramStates::track_power = false;
             }
         }
 
@@ -95,7 +95,7 @@ void logicLoop()
         DeviceManager::loop();
 
         // get outbound frames from modules
-        Interface::CanFrame tmp_frame;
+        Globals::CanFrame tmp_frame;
         while (GUI::getFrame(tmp_frame))
             CAN::addFrameToQueue(tmp_frame, OUTQUEUE);
         while (FeedbackMonitor::getFrame(tmp_frame))
@@ -115,7 +115,7 @@ void logicLoop()
             if (_current_time - _last_time_sent > std::chrono::milliseconds(CAN_FRAME_TIMEOUT))
             {
                 _last_time_sent = _current_time;
-                Interface::CanFrame newOutFrame = CAN::processQueue(OUTQUEUE);
+                Globals::CanFrame newOutFrame = CAN::processQueue(OUTQUEUE);
                 if (newOutFrame.can_hash > 0) BusMonitor::addFrame(newOutFrame);
             }
         }
@@ -126,11 +126,11 @@ void logicLoop()
 // Main code
 int main(int argc, char** argv)
 {
-    Interface::loadIni();
+    Globals::loadIni();
 
     consoleWindow = GetConsoleWindow();
 #ifndef _DEBUG
-    if (!Interface::ProgramSettings::trace) ShowWindow(consoleWindow, SW_HIDE);
+    if (!Globals::ProgramSettings::trace) ShowWindow(consoleWindow, SW_HIDE);
 #endif
     GUI::setup(1900, 900, u8"M‰CAN Control Panel");
 

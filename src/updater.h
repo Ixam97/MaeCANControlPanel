@@ -11,12 +11,12 @@
  * M‰CAN Control Panel
  * updater.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-10.1]
+ * Commit: [2022-03-17.1]
  */
 
 #pragma once
 //#include "canframe.h"
-#include "interface.h"
+#include "globals.h"
 #include <vector>
 #include <queue>
 #include <string>
@@ -24,8 +24,8 @@
 class MCANUpdater
 {
 private:
-	inline static std::queue<Interface::CanFrame> m_frameInQueue;
-	inline static std::queue<Interface::CanFrame> m_frameOutQueue;
+	inline static std::queue<Globals::CanFrame> m_frameInQueue;
+	inline static std::queue<Globals::CanFrame> m_frameOutQueue;
 
 	inline static std::vector<uint8_t> m_hexfile_byte_stream;
 
@@ -83,10 +83,10 @@ public:
 	static float getProgress();
 
 	// Pass a frame to the updater
-	static void addFrame(Interface::CanFrame& _frame);
+	static void addFrame(Globals::CanFrame& _frame);
 
 	// Get a frame the updater wants to send
-	static bool getFrame(Interface::CanFrame& _frame);
+	static bool getFrame(Globals::CanFrame& _frame);
 };
 
 

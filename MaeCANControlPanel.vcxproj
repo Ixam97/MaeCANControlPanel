@@ -313,7 +313,7 @@
     <ClCompile Include="src\feedbackmonitor.cpp" />
     <ClCompile Include="src\gui.cpp" />
     <ClCompile Include="src\guihelpers.cpp" />
-    <ClCompile Include="src\interface.cpp" />
+    <ClCompile Include="src\globals.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\updater.cpp" />
   </ItemGroup>
@@ -335,7 +335,7 @@
     <ClInclude Include="src\gui.h" />
     <ClInclude Include="src\guihelpers.h" />
     <ClInclude Include="src\ini.h" />
-    <ClInclude Include="src\interface.h" />
+    <ClInclude Include="src\globals.h" />
     <ClInclude Include="src\updater.h" />
     <ClInclude Include="version.h" />
   </ItemGroup>

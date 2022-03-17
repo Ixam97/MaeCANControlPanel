@@ -11,10 +11,10 @@
  * M‰CAN Control Panel
  * configworker.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-10.1]
+ * Commit: [2022-03-17.1]
  */
 
-#include "interface.h"
+#include "globals.h"
 #include <vector>
 #include <queue>
 
@@ -22,12 +22,13 @@
 class ConfigWorker
 {
 private:
-    static inline std::vector<Interface::CanFrame> m_frameInVector;
-    static inline std::queue<Interface::CanFrame> m_frameOutQueue;
+    static inline std::vector<Globals::CanFrame> m_frameInVector;
+    static inline std::queue<Globals::CanFrame> m_frameOutQueue;
     static inline uint8_t m_current_index = 0;
     static inline bool m_busy = false;
 
-    static void addFrameToQueue(Interface::CanFrame _frame);
+    static void addFrameToQueue(Globals::CanFrame _frame);
+	static void removeFromReadingsRequestList(uint32_t _uid);
 public:
 	struct configChannel
 	{
@@ -91,11 +92,13 @@ public:
     // reset the config worker
     static void reset();
 
+	static void removeFromDeviceList(size_t _index);
+
     // add CAN frame to internal input buffer and process it if ready
-    static void addFrame(Interface::CanFrame _frame);
+    static void addFrame(Globals::CanFrame _frame);
 
     // get CAN frame from internal output buffer
-    static bool getFrame(Interface::CanFrame& _frame);
+    static bool getFrame(Globals::CanFrame& _frame);
 
     // Define a device to get config from
     static void workOn(uint32_t _uid);
