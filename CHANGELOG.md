@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.2
+ - Alternative Variante (OpenGL3), bei der Fenster aus dem Hauptfenster heraus gezogen werden können
+ - Hirarchie der Filter für den Busmonitor kann angepasst werden (Filter werden in der Reihenfolge von oben nach unten abgearbeitet)
+
 ## v0.2.1
  - Einzelne Geräte können aus der Liste im Gerätemanager entfernt werden
  - MäCAN-Geräte können über die Geräteliste zurückgesetzt werden

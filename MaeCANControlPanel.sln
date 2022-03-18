@@ -13,6 +13,10 @@ Global
 		AutoGitRelease|x86 = AutoGitRelease|x86
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		glfw_gl3_debug|x64 = glfw_gl3_debug|x64
+		glfw_gl3_debug|x86 = glfw_gl3_debug|x86
+		glfw_gl3_release|x64 = glfw_gl3_release|x64
+		glfw_gl3_release|x86 = glfw_gl3_release|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
@@ -29,6 +33,14 @@ Global
 		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.Debug|x64.Build.0 = Debug|x64
 		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.Debug|x86.ActiveCfg = Debug|Win32
 		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.Debug|x86.Build.0 = Debug|Win32
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.glfw_gl3_debug|x64.ActiveCfg = glfw_gl3_debug|x64
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.glfw_gl3_debug|x64.Build.0 = glfw_gl3_debug|x64
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.glfw_gl3_debug|x86.ActiveCfg = glfw_gl3_debug|Win32
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.glfw_gl3_debug|x86.Build.0 = glfw_gl3_debug|Win32
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.glfw_gl3_release|x64.ActiveCfg = glfw_gl3_release|x64
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.glfw_gl3_release|x64.Build.0 = glfw_gl3_release|x64
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.glfw_gl3_release|x86.ActiveCfg = glfw_gl3_release|Win32
+		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.glfw_gl3_release|x86.Build.0 = glfw_gl3_release|Win32
 		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.Release|x64.ActiveCfg = Release|x64
 		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.Release|x64.Build.0 = Release|x64
 		{9B5B9C31-E4C5-47AE-857C-AD1465E1ED5A}.Release|x86.ActiveCfg = Release|Win32

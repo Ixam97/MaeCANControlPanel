@@ -66,6 +66,12 @@
     <ClCompile Include="src\guihelpers.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="include\ImGuiDocking\imgui_impl_glfw.cpp">
+      <Filter>ImGuiDocking</Filter>
+    </ClCompile>
+    <ClCompile Include="include\ImGuiDocking\imgui_impl_opengl3.cpp">
+      <Filter>ImGuiDocking</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\gui.h">
@@ -127,6 +133,15 @@
     </ClInclude>
     <ClInclude Include="src\guihelpers.h">
       <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImGuiDocking\imgui_impl_glfw.h">
+      <Filter>ImGuiDocking</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImGuiDocking\imgui_impl_opengl3.h">
+      <Filter>ImGuiDocking</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImGuiDocking\imgui_impl_opengl3_loader.h">
+      <Filter>ImGuiDocking</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

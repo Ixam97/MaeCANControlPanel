@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * busmonitor.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-17.1]
+ * Commit: [2022-03-18.1]
  */
 
 #include "busmonitor.h"
@@ -20,14 +20,17 @@
 #include <sstream>
 #include <iomanip>
 
+#define CMD_COMBO_STRING   u8"System\0Lok Discovery\0MFX Bind\0MFX Verify\0Lok Geschwindigkeit\0Lok Richtung\0Lok Funktion\0Read Config\0Write Config\0Zubehör Schalten\0Zubehör Konfig\0S88 Polling\0S88 Event\0SX1 Event\0Teilnehmer Ping\0Updateangebot\0Read Config Data\0Bootloader CAN\0Bootloader Schiene\0Statusdaten Konfiguration\0Data Query\0Config Data Stream\0Connect Data Stream\0"
+
+uint8_t m_cmd_table[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x0B, 0x0C, 0x10, 0x11, 0x12, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x20, 0x21, 0x22 };
+
 class CanFilter;
+
+void removeFilterFromList(int _index);
+void swapFilters(int _index_a, int _index_b);
 
 std::vector<Globals::CanFrame> m_console_vector;
 std::vector<CanFilter> m_filter_vector;
-bool b_exclusive_filters = true;
-
-uint8_t m_cmd_table[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x0B, 0x0C, 0x10, 0x11, 0x12, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x20, 0x21, 0x22 };
-#define CMD_COMBO_STRING   u8"System\0Lok Discovery\0MFX Bind\0MFX Verify\0Lok Geschwindigkeit\0Lok Richtung\0Lok Funktion\0Read Config\0Write Config\0Zubehör Schalten\0Zubehör Konfig\0S88 Polling\0S88 Event\0SX1 Event\0Teilnehmer Ping\0Updateangebot\0Read Config Data\0Bootloader CAN\0Bootloader Schiene\0Statusdaten Konfiguration\0Data Query\0Config Data Stream\0Connect Data Stream\0"
 
 class CanFilter
 {
@@ -46,14 +49,13 @@ public:
     bool filter(Globals::CanFrame& _frame)
     {
         bool match = true;
-        for (auto& n_filter : m_filter_vector) {
-            if (b_cmd_filter && _frame.cmd != m_cmd_filter)
-                match = false;
-            if (b_hash_filter && _frame.can_hash != m_hash_filter)
-                match = false;
-            if (b_cmd_filter && _frame.resp != (int)m_resp_filter)
-                match = false;
-        }
+        if (b_cmd_filter && _frame.cmd != m_cmd_filter)
+            match = false;
+        if (b_hash_filter && _frame.can_hash != m_hash_filter)
+            match = false;
+        if (b_cmd_filter && _frame.resp != (int)m_resp_filter)
+            match = false;
+
         return match;
     }
 
@@ -62,6 +64,17 @@ public:
         ImGui::Separator();
         ImGui::PushID(_index);
         ImGui::PushItemWidth(100 * Globals::ProgramStates::gui_scaling);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+        if (ImGui::Button(u8"\u2715"))
+            removeFilterFromList(_index);
+        ImGui::PopStyleColor();
+        ImGui::SameLine();
+        if (ButtonDisablable(u8"\u25b2", (_index == 0)))
+            swapFilters(_index - 1, _index);
+        ImGui::SameLine();
+        if (ButtonDisablable(u8"\u25bc", (_index == m_filter_vector.size() - 1)))
+            swapFilters(_index + 1, _index);
+        ImGui::SameLine();
         ImGui::Combo("##", &m_exclude, "Include\0Exclude\0");
         ImGui::SameLine();
         ImGui::Checkbox("Befehl", &b_cmd_filter);
@@ -88,6 +101,31 @@ public:
     }
 };
 
+void removeFilterFromList(int _index)
+{
+    if (_index < m_filter_vector.size())
+    {
+        if (_index == m_filter_vector.size() - 1)
+        {
+            m_filter_vector.pop_back();
+            return;
+        }
+        for (size_t i = _index; i < m_filter_vector.size() - 1; i++)
+        {
+            m_filter_vector[i] = m_filter_vector[i + 1];
+        }
+        m_filter_vector.pop_back();
+    }
+}
+
+void swapFilters(int _index_a, int _index_b)
+{
+    if (_index_a >= 0 && _index_b >= 0 && _index_a < m_filter_vector.size() && _index_b < m_filter_vector.size())
+    {
+        std::swap(m_filter_vector[_index_a], m_filter_vector[_index_b]);
+    }
+}
+
 namespace BusMonitor
 {
     std::string getLoco(uint8_t* data) 
@@ -95,7 +133,6 @@ namespace BusMonitor
         uint16_t locID = (data[2] << 8) | data[3];
         std::stringstream ss_loco;
         char prot[32];
-        // int addrs;
 
         memset(prot, 0, sizeof(prot));
 
@@ -134,7 +171,6 @@ namespace BusMonitor
 
             switch (_frame.cmd)
             {
-                // System
             case CMD_SYS:
             {
                 ImGui::SameLine();
@@ -238,7 +274,6 @@ namespace BusMonitor
                 }
                 break;
             }
-            // Loco discovery
             case CMD_LOCO_DIS:
             {
                 ImGui::SameLine();
@@ -480,8 +515,6 @@ namespace BusMonitor
             }
 
             if (ImGui::BeginPopup("Filter")) {
-                // ImGui::Checkbox("Exclusiv", &b_exclusive_filters);
-                // ImGui::SameLine();
                 if (ImGui::Button(u8"Hinzufügen")) m_filter_vector.push_back(CanFilter());
                 ImGui::SameLine();
                 if (ButtonDisablable("Entfernen", !(m_filter_vector.size() > 0)) && m_filter_vector.size() > 0) m_filter_vector.pop_back();
@@ -507,30 +540,13 @@ namespace BusMonitor
 
             ImGui::Separator();
 
-            //const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
             ImGui::BeginChild("Scrolling Region");
             ImGui::PushFont((ImFont*)console_font);
 
             if (copy_to_clipboard) ImGui::LogToClipboard();
 
             for (Globals::CanFrame& n : m_console_vector)
-            {
                 consoleDecoder(n, b_decode);
-                //if (m_filter_vector.size() == 0)
-                //    consoleDecoder(n, b_decode);
-                //else
-                //{
-                //    bool b_printed = false;
-                //    for (auto& n_filter : m_filter_vector)
-                //    {
-                //        if (!n_filter.filter(n) && !b_printed)
-                //        {
-                //            b_printed = true;
-                //            consoleDecoder(n, b_decode);
-                //        }
-                //    }
-                //}
-            }
 
             if (copy_to_clipboard) 
                 ImGui::LogFinish();
@@ -553,23 +569,12 @@ namespace BusMonitor
             m_console_vector.push_back(_frame);
         else
         {
-            //bool b_filter = !b_exclusive_filters;
-            //for (auto& n_filter : m_filter_vector)
-            //{
-            //    if (n_filter.filter(_frame) && !b_exclusive_filters)
-            //        b_filter = false;
-            //    else if (n_filter.filter(_frame) && b_exclusive_filters)
-            //        b_filter = true;
-            //}
-
             bool b_filter = false;
-
             for (auto& n_filter : m_filter_vector)
             {
                 if (n_filter.filter(_frame))
                     b_filter = n_filter.isExcluding();
             }
-
             if (!b_filter)
                 m_console_vector.push_back(_frame);
         }

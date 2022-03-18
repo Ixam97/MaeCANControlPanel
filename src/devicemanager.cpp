@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * devicemanager.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-17.1]
+ * Commit: [2022-03-18.1]
  */
 
 #define T_SLIDER 1
@@ -212,6 +212,7 @@ namespace DeviceManager
                         if (current_index >= ConfigWorker::device_list.size())
                             current_index--;
                     }
+                    ImGui::PushItemWidth(200 * Globals::ProgramStates::gui_scaling);
                     if (device.num_readings_channels > 0)
                     {
                         ImGui::Separator();
@@ -252,6 +253,7 @@ namespace DeviceManager
                             }
                         }
                     }
+                    ImGui::PopItemWidth();
                 }
             }
             ImGui::EndChild();

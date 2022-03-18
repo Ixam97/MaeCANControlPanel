@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * gui.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-17.1]
+ * Commit: [2022-03-18.1]
  */
 
 #include "gui.h"
@@ -20,23 +20,41 @@
 #include "feedbackmonitor.h"
 #include "busmonitor.h"
 #include "imgui.h"
+
+#ifdef GLFW_GL3
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+#include <GLES2/gl2.h>
+#endif
+#include "GLFW/glfw3.h" // Will drag system OpenGL headers
+#else
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
 #include "SDL.h"
 #include "SDL_main.h"
+#endif
+
 #include <sstream>
 #include <queue>
 #include <windows.h>
 #include <shellapi.h>
 
+#ifndef GLFW_GL3
 #if !SDL_VERSION_ATLEAST(2,0,17)
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
+#endif
 #endif
 
 namespace GUI
 {
+#ifdef GLFW_GL3
+    GLFWwindow* m_window = nullptr;
+#else
     SDL_Renderer* m_renderer = nullptr;
     SDL_Window* m_window = nullptr;
+#endif
+    ImFont* m_font_fallback = nullptr;
     ImFont* m_font = nullptr;
     ImFont* m_bold_font = nullptr;
     ImFont* m_consolas = nullptr;
@@ -97,7 +115,14 @@ namespace GUI
         ImGui::EndDisabled();
     }
 
+#ifndef GLFW_GL3
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+#else
+    static void glfw_error_callback(int error, const char* description)
+    {
+        fprintf(stderr, "Glfw Error %d: %s\n", error, description);
+    }
+#endif
 
     void setup(int x_res, int y_res, const char* window_name) {
 
@@ -108,6 +133,40 @@ namespace GUI
         m_x_res = x_res;
         m_y_res = y_res;
 
+#ifdef GLFW_GL3
+        glfwSetErrorCallback(glfw_error_callback);
+        if (!glfwInit())
+            return;
+        // Decide GL+GLSL versions
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+        // GL ES 2.0 + GLSL 100
+        const char* glsl_version = "#version 100";
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+#elif defined(__APPLE__)
+        // GL 3.2 + GLSL 150
+        const char* glsl_version = "#version 150";
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
+#else
+        // GL 3.0 + GLSL 130
+        const char* glsl_version = "#version 130";
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+        //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+        //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+#endif
+
+        // Create window with graphics context
+        m_window = glfwCreateWindow(m_x_res, m_y_res, window_name, NULL, NULL);
+        if (m_window == NULL)
+            return;
+        glfwMakeContextCurrent(m_window);
+        glfwSwapInterval(1); // Enable vsync
+#else
         // Setup SDL
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
         {
@@ -123,26 +182,54 @@ namespace GUI
             SDL_Log("Error creating SDL_Renderer!");
             //return false;
         }
+#endif
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
-        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        ImGui::GetIO().IniFilename = "MaeCANControlPanelGUI.ini";
+        ImGuiIO& io = ImGui::GetIO(); (void)io;
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+#ifdef GLFW_GL3
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
+#endif
+        io.IniFilename = "MaeCANControlPanelGUI.ini";
 
         // Setup Dear ImGui style
         customSytle();
 
+#ifdef GLFW_GL3
+        // Setup Platform/Renderer backends
+        ImGui_ImplGlfw_InitForOpenGL(m_window, true);
+        ImGui_ImplOpenGL3_Init(glsl_version);
+#else
         // Setup Platform/Renderer backends
         ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
         ImGui_ImplSDLRenderer_Init(m_renderer);
+#endif
 
-        m_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\seguisym.ttf", floor(18.0f * m_scaling));
+        const ImWchar font_ranges[] = { 0x25b2, 0x25b2, // Up arrow
+                                        0x25bc, 0x25bc, // Down arrow
+                                        0x2715, 0x2715, // Cross
+                                        0 };
+        ImFontConfig font_config;
+        font_config.MergeMode = true;
+
+        m_font_fallback = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\seguisym.ttf", floor(18.0f * m_scaling));
+        m_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\seguisym.ttf", floor(18.0f * m_scaling), &font_config, font_ranges);
         m_bold_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\seguisym.ttf", floor(24.0f * m_scaling));
         m_consolas = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\consola.ttf", floor(14.0f * m_scaling));
+
+        m_status_size.y = floor(30 * m_scaling);
+        m_stopgo_size.x = -1;
     }
 
     void poll(bool& _exit)
     {
+#ifdef GLFW_GL3
+        if (glfwWindowShouldClose(m_window))
+            m_exit = true;
+        glfwPollEvents();
+#else
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
@@ -152,6 +239,7 @@ namespace GUI
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(m_window))
                 m_exit = true;
         }
+#endif
 
         if (m_exit)
         {
@@ -168,12 +256,16 @@ namespace GUI
     void newFrame()
     {
         // Start the Dear ImGui frame
-
+#ifdef GLFW_GL3
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+#else
         ImGui_ImplSDLRenderer_NewFrame();
         ImGui_ImplSDL2_NewFrame();
+#endif
         ImGui::NewFrame();
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.0f);
-        ImGui::PushFont(m_font);
+        //ImGui::PushFont(m_font);
     }
 
     void render()
@@ -181,19 +273,50 @@ namespace GUI
         // Rendering every loop
 
         ImGui::PopStyleVar();
-        ImGui::PopFont();
-
+        //ImGui::PopFont();
+        ImGui::EndFrame();
         ImGui::Render();
 
+#ifdef GLFW_GL3
+        ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+        int display_w, display_h;
+        glfwGetFramebufferSize(m_window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Update and Render additional Platform Windows
+        // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
+        //  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
+        if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            GLFWwindow* backup_current_context = glfwGetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(backup_current_context);
+        }
+
+        glfwSwapBuffers(m_window);
+#else
         SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 0);
         SDL_RenderClear(m_renderer);
         ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
         SDL_RenderPresent(m_renderer);
+#endif
     }
 
     void cleanup()
     {
         // Cleanup
+#ifdef GLFW_GL3
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+
+        glfwDestroyWindow(m_window);
+        glfwTerminate();
+#else
         ImGui_ImplSDLRenderer_Shutdown();
         ImGui_ImplSDL2_Shutdown();
         ImGui::DestroyContext();
@@ -201,6 +324,7 @@ namespace GUI
         SDL_DestroyRenderer(m_renderer);
         SDL_DestroyWindow(m_window);
         SDL_Quit();
+#endif
     }
 
     void draw(bool& _exit) {
@@ -242,12 +366,13 @@ namespace GUI
         }
         ImGui::End();
 
-        ImGui::SetNextWindowSize(ImVec2(viewport->Size.x - m_stopgo_size.x, -1));
-        ImGui::SetNextWindowPos(ImVec2(0, viewport->Size.y - m_status_size.y));
-
+        ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, m_status_size.y));
+        ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + viewport->Size.y - m_status_size.y));
+        ImGui::SetNextWindowViewport(ImGui::GetMainViewport()->ID);
         if (ImGui::Begin("Status Bar", NULL, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoBringToFrontOnFocus))
         {
-            m_status_size = ImGui::GetWindowSize();
+            // m_status_size.x = ImGui::GetWindowSize().x;
+            // m_status_size.x = viewport->Size.x - m_stopgo_size.x;
 
             if (!Globals::ProgramStates::tcp_started && !Globals::ProgramStates::tcp_success)
             {
@@ -284,21 +409,16 @@ namespace GUI
                 ImGui::Text("Verbunden mit IP %s, Port %d.", Globals::ProgramStates::connected_ip.c_str(), Globals::ProgramStates::connected_port);
             }
         }
-        ImGui::End();
+        ImGui::SameLine();
 
-        ImGui::SetNextWindowSize(ImVec2(-1, m_status_size.y));
-        ImGui::SetNextWindowPos(ImVec2(m_status_size.x, viewport->Size.y - m_status_size.y));
-
-        if (ImGui::Begin("StopGo Buttons", NULL, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoBringToFrontOnFocus))
+        ImGui::SetNextWindowPos(ImVec2(ImGui::GetWindowPos().x + ImGui::GetWindowSize().x - m_stopgo_size.x, ImGui::GetWindowPos().y));
+        if (ImGui::BeginChild("StopGo Buttons", ImVec2(-1, m_status_size.y), true, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoBringToFrontOnFocus))
         {
-            m_stopgo_size = ImGui::GetWindowSize();
-
             if (Globals::ProgramStates::tcp_success)
             {
                 ImGui::Text("Spannung: %.2f V, Strom: %.2f A", DeviceManager::voltage, DeviceManager::current);
                 ImGui::SameLine();
             }
-
             bool b_stop = !Globals::ProgramStates::track_power && Globals::ProgramStates::tcp_success;
             bool b_go = Globals::ProgramStates::track_power && Globals::ProgramStates::tcp_success;
 
@@ -318,10 +438,11 @@ namespace GUI
             }
             if (ImGui::SmallButton("GO") && Globals::ProgramStates::tcp_success) addFrameToQueue(m_goFrame);
             if (b_go) ImGui::PopStyleColor(2);
-
+            ImGui::SameLine();
+            m_stopgo_size.x = ImGui::GetCursorPosX();
         }
+        ImGui::EndChild();
         ImGui::End();
-
         if (m_draw_settings) drawSettings();
         if (m_draw_info) drawInfo();
 
