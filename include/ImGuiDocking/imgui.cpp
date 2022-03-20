@@ -6227,7 +6227,8 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
 
     // Close button
     if (has_close_button)
-        if (CloseButton(window->GetID("#CLOSE"), close_button_pos))
+        //if (CloseButton(window->GetID("#CLOSE"), close_button_pos))
+        if (WindowCloseButton(window->GetID("#CLOSE"), close_button_pos))
             *p_open = false;
 
     window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
@@ -15349,7 +15350,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
             PushItemFlag(ImGuiItemFlags_Disabled, true);
             PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_Text] * ImVec4(1.0f,1.0f,1.0f,0.4f));
         }
-        if (CloseButton(host_window->GetID("#CLOSE"), close_button_pos))
+        if (WindowCloseButton(host_window->GetID("#CLOSE"), close_button_pos))
         {
             node->WantCloseAll = true;
             for (int n = 0; n < tab_bar->Tabs.Size; n++)

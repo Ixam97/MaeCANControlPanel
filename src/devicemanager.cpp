@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * devicemanager.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-18.1]
+ * Commit: [2022-03-20.1]
  */
 
 #define T_SLIDER 1
@@ -137,8 +137,10 @@ namespace DeviceManager
         static size_t current_index = 0;
         if (b_draw)
         {
-            if (current_index >= ConfigWorker::device_list.size())
+            if (current_index >= ConfigWorker::device_list.size() && ConfigWorker::device_list.size() > 0)
                 current_index = ConfigWorker::device_list.size() - 1;
+            else if (ConfigWorker::device_list.size() == 0)
+                current_index = 0;
             if (!ImGui::Begin(u8"Gerätemanager", &b_draw, ImGuiWindowFlags_NoCollapse))
             {
                 ImGui::End();
@@ -178,82 +180,85 @@ namespace DeviceManager
             ImGui::SameLine();
             if (ImGui::BeginChild("DeviceInfoRegion"))
             {
-                if (ConfigWorker::device_list.size() > 0 && ConfigWorker::device_list[current_index].data_complete)
+                if (current_index < ConfigWorker::device_list.size())
                 {
-                    auto& device = ConfigWorker::device_list[current_index];
-                    bool b_is_not_mcan = !(device.type == 0x51 || device.type == 0x52 || device.type == 0x53 || device.type == 0x54 || device.type == 0x70);
-                    ImGui::PushFont((ImFont*)_bold_font);
-                    ImGui::Text(device.name.c_str());
-                    ImGui::PopFont();
-                    ImGui::Separator();
-                    ImGui::Text("Artikelnummer: %s ", device.item.c_str());
-                    ImGui::Text("Seriennummer: %d", device.serialnbr);
-                    ImGui::Text("Version: %d.%d", device.version_h, device.version_l);
-                    ImGui::Text("UID: 0x%08X", device.uid);
-                    ImGui::Text(u8"Konfigurationskanäle: %d, Messwertkanäle: %d", device.num_config_channels, device.num_readings_channels);
-
-                    if (ButtonDisablable("Update", b_is_not_mcan)) {
-                        m_update_uid = device.uid;
-                        m_update_type = device.type;
-                        m_update_name = device.name;
-                        m_draw_updater = true;
-                    }
-                    ImGui::SameLine();
-                    if (ButtonDisablable("Reset", b_is_not_mcan))
+                    if (ConfigWorker::device_list[current_index].data_complete)
                     {
-                        uint32_t& tmp_uid = device.uid;
-                        uint8_t tmp_data[8] = {(uint8_t)(tmp_uid >> 24), (uint8_t)(tmp_uid >> 16), (uint8_t)(tmp_uid >> 8), (uint8_t)(tmp_uid), 0,0,0,0};
-                        m_frame_out_queue.push(Globals::CanFrame(CMD_MCAN_BOOT, 0, 4, tmp_data));
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::Button(u8"Aus Liste löschen"))
-                    {
-                        ConfigWorker::removeFromDeviceList(current_index);
-                        if (current_index >= ConfigWorker::device_list.size())
-                            current_index--;
-                    }
-                    ImGui::PushItemWidth(200 * Globals::ProgramStates::gui_scaling);
-                    if (device.num_readings_channels > 0)
-                    {
+                        auto& device = ConfigWorker::device_list[current_index];
+                        bool b_is_not_mcan = !(device.type == 0x51 || device.type == 0x52 || device.type == 0x53 || device.type == 0x54 || device.type == 0x70);
+                        ImGui::PushFont((ImFont*)_bold_font);
+                        ImGui::Text(device.name.c_str());
+                        ImGui::PopFont();
                         ImGui::Separator();
-                        for (ConfigWorker::readingsChannel n : device.vec_readings_channels)
-                        {
-                            float true_value = (n.current_value * n.value_factor) + std::stof(n.s_min);
-                            float relative_value = (true_value - std::stof(n.s_min)) / (std::stof(n.s_max) - std::stof(n.s_min));
-                            ImGui::Text(u8"%s: %.2f %s", n.label.c_str(), true_value, n.unit.c_str());
+                        ImGui::Text("Artikelnummer: %s ", device.item.c_str());
+                        ImGui::Text("Seriennummer: %d", device.serialnbr);
+                        ImGui::Text("Version: %d.%d", device.version_h, device.version_l);
+                        ImGui::Text("UID: 0x%08X", device.uid);
+                        ImGui::Text(u8"Konfigurationskanäle: %d, Messwertkanäle: %d", device.num_config_channels, device.num_readings_channels);
 
-                            if (n.current_value > n.points[3]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[3]));
-                            else if (n.current_value > n.points[2]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[2]));
-                            else if (n.current_value > n.points[1]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[1]));
-                            else ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[0]));
-                            ImGui::ProgressBar(relative_value, ImVec2(-1, 0), "");
-                            ImGui::PopStyleColor();
+                        if (ButtonDisablable("Update", b_is_not_mcan)) {
+                            m_update_uid = device.uid;
+                            m_update_type = device.type;
+                            m_update_name = device.name;
+                            m_draw_updater = true;
                         }
-                    }
-                    if (device.num_config_channels > 0)
-                    {
-                        ImGui::Separator();
-                        for (int i = 0; i < device.vec_config_channels.size(); i++)
+                        ImGui::SameLine();
+                        if (ButtonDisablable("Reset", b_is_not_mcan))
                         {
-                            //if (n.unit == "") ImGui::Text("%s", n.label.c_str());
-                            //else ImGui::Text("%s (%s)", n.label.c_str(), n.unit.c_str());
+                            uint32_t& tmp_uid = device.uid;
+                            uint8_t tmp_data[8] = { (uint8_t)(tmp_uid >> 24), (uint8_t)(tmp_uid >> 16), (uint8_t)(tmp_uid >> 8), (uint8_t)(tmp_uid), 0,0,0,0 };
+                            m_frame_out_queue.push(Globals::CanFrame(CMD_MCAN_BOOT, 0, 4, tmp_data));
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button(u8"Aus Liste löschen"))
+                        {
+                            ConfigWorker::removeFromDeviceList(current_index);
+                            if (current_index >= ConfigWorker::device_list.size())
+                                current_index--;
+                        }
+                        ImGui::PushItemWidth(200 * Globals::ProgramStates::gui_scaling);
+                        if (device.num_readings_channels > 0)
+                        {
+                            ImGui::Separator();
+                            for (ConfigWorker::readingsChannel n : device.vec_readings_channels)
+                            {
+                                float true_value = (n.current_value * n.value_factor) + std::stof(n.s_min);
+                                float relative_value = (true_value - std::stof(n.s_min)) / (std::stof(n.s_max) - std::stof(n.s_min));
+                                ImGui::Text(u8"%s: %.2f %s", n.label.c_str(), true_value, n.unit.c_str());
 
-                            // Drop down
-                            if (device.vec_config_channels[i].type == 1)
-                            {
-                                if (ImGui::Combo(device.vec_config_channels[i].label.c_str(), &(device.vec_config_channels[i].wanted_value), device.vec_config_channels[i].dropdown_options_separated_by_zero.c_str()))
-                                    device.vec_config_channels[i].request_sent = false;
-                            }
-                            // Int slider
-                            else if (device.vec_config_channels[i].type == 2)
-                            {
-                                if (ImGui::SliderInt(device.vec_config_channels[i].label.c_str(), &(device.vec_config_channels[i].wanted_value), device.vec_config_channels[i].min, device.vec_config_channels[i].max))
-                                    device.vec_config_channels[i].request_sent = false;
-                                ImGui::SameLine(); helpMarker("STRG + Klick, um Zahlenwerte einzugeben.");
+                                if (n.current_value > n.points[3]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[3]));
+                                else if (n.current_value > n.points[2]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[2]));
+                                else if (n.current_value > n.points[1]) ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[1]));
+                                else ImGui::PushStyleColor(ImGuiCol_PlotHistogram, byteToColor(n.colors[0]));
+                                ImGui::ProgressBar(relative_value, ImVec2(-1, 0), "");
+                                ImGui::PopStyleColor();
                             }
                         }
+                        if (device.num_config_channels > 0)
+                        {
+                            ImGui::Separator();
+                            for (int i = 0; i < device.vec_config_channels.size(); i++)
+                            {
+                                //if (n.unit == "") ImGui::Text("%s", n.label.c_str());
+                                //else ImGui::Text("%s (%s)", n.label.c_str(), n.unit.c_str());
+
+                                // Drop down
+                                if (device.vec_config_channels[i].type == 1)
+                                {
+                                    if (ImGui::Combo(device.vec_config_channels[i].label.c_str(), &(device.vec_config_channels[i].wanted_value), device.vec_config_channels[i].dropdown_options_separated_by_zero.c_str()))
+                                        device.vec_config_channels[i].request_sent = false;
+                                }
+                                // Int slider
+                                else if (device.vec_config_channels[i].type == 2)
+                                {
+                                    if (ImGui::SliderInt(device.vec_config_channels[i].label.c_str(), &(device.vec_config_channels[i].wanted_value), device.vec_config_channels[i].min, device.vec_config_channels[i].max))
+                                        device.vec_config_channels[i].request_sent = false;
+                                    ImGui::SameLine(); helpMarker("STRG + Klick, um Zahlenwerte einzugeben.");
+                                }
+                            }
+                        }
+                        ImGui::PopItemWidth();
                     }
-                    ImGui::PopItemWidth();
                 }
             }
             ImGui::EndChild();

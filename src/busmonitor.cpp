@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * busmonitor.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-18.1]
+ * Commit: [2022-03-20.1]
  */
 
 #include "busmonitor.h"
@@ -323,38 +323,158 @@ namespace BusMonitor
             }
             case CMD_LOCO_DIR:
             {
+                std::stringstream ss_output;
+                ss_output << "Lok " << getLoco(_frame.data);
+                if (_frame.dlc == 4)
+                    ss_output << " Richtung wird abgefragt";
+                else if (_frame.dlc == 5)
+                {
+                    switch (_frame.data[4])
+                    {
+                    case 0:
+                        ss_output << " Richtung bleibt gleich";
+                        break;
+                    case 1:
+                        ss_output << " Richtung: vorw‰rts";
+                        break;
+                    case 2:
+                        ss_output << " Richtung: r¸ckw‰rts";
+                        break;
+                    case 3:
+                        ss_output << " Richtung wechseln";
+                        break;
+                    default:
+                        ss_output << " Richtung unbekannt";
+                        break;
+                    }
+                }
+                ImGui::SameLine();
+                ImGui::Text(ss_output.str().c_str());
                 break;
             }
             case CMD_LOCO_FN:
             {
+                if (_frame.dlc == 5)
+                {
+                    ImGui::SameLine();
+                    ImGui::Text("Lok %s Funktion %d", getLoco(_frame.data).c_str(), _frame.data[4]);
+                }
+                else if (_frame.dlc == 6) 
+                {
+                    ImGui::SameLine();
+                    ImGui::Text("Lok %s Funktion %d Wert %d", getLoco(_frame.data).c_str(), _frame.data[4], _frame.data[5]);
+                }
+                else if (_frame.dlc == 7)
+                {
+                    ImGui::SameLine();
+                    ImGui::Text("Lok %s Funktion %d Wert %d Funktionswert %d", getLoco(_frame.data).c_str(), _frame.data[4], _frame.data[5], (_frame.data[6] << 8) | _frame.data[6]);
+                }
                 break;
             }
             case CMD_READ_CONF:
             {
+                if (_frame.dlc == 7 && _frame.resp == 0) {
+                    int cv_number = ((_frame.data[4] & 0x3) << 8) + _frame.data[5];
+                    int cv_index = _frame.data[4] >> 2;
+                    ImGui::SameLine();
+                    ImGui::Text("Read Config Lok %s CV Nummer %u Index %u Anzahl %u", getLoco(_frame.data).c_str(), cv_number, cv_index, _frame.data[6]);
+                }
+                else
+                {
+                    int cv_number = ((_frame.data[4] & 0x3) << 8) + _frame.data[5];
+                    int cv_index = _frame.data[4] >> 2;
+                    if (_frame.dlc == 6)
+                    {
+                        ImGui::SameLine();
+                        ImGui::Text("Read Config Lok %s CV Nummer %u Index %u", getLoco(_frame.data).c_str(), cv_number, cv_index);
+                    }
+                    else if (_frame.dlc == 7)
+                    {
+                        ImGui::SameLine();
+                        ImGui::Text("Read Config Lok %s CV Nummer %u Index %u Wert %u", getLoco(_frame.data).c_str(), cv_number, cv_index, _frame.data[6]);
+                    }
+                }
                 break;
             }
             case CMD_WRITE_CONF:
             {
+                int cv_number = ((_frame.data[4] & 0x3) << 8) + _frame.data[5];
+                int cv_index = _frame.data[4] >> 2;
+                ImGui::SameLine();
+                if (_frame.dlc == 8) 
+                    ImGui::Text("Write Config Lok %s CV Nummer %u Index %u Wert %u Ctrl 0x%02X", getLoco(_frame.data).c_str(), cv_number, cv_index, _frame.data[6], _frame.data[7]);
+                else
+                    ImGui::Text("Write Config Lok %s Befehl unbekannt", getLoco(_frame.data).c_str());
                 break;
             }
             case CMD_SWITCH_ACC:
             {
+                if (_frame.dlc >= 6) {
+                    ImGui::SameLine();
+                    if ((frame_uid > 0x2FFF) && (frame_uid < 0x3400))
+                        ImGui::Text("Magnetartikel MM1 ID %u Ausgang %u Strom %u", frame_uid - 0x2FFF, _frame.data[4], _frame.data[5]);
+                    else if ((frame_uid > 0x37FF) && (frame_uid < 0x4000))
+                        ImGui::Text("Magnetartikel DCC ID %u Ausgang %u Strom %u", frame_uid - 0x37FF, _frame.data[4], _frame.data[5]);
+                    else
+                        ImGui::Text("Magnetartikel ID 0x%08X Ausgang %u Strom %u", frame_uid, _frame.data[4], _frame.data[5]);
+                }
+                if (_frame.dlc == 8)
+                {
+                    ImGui::SameLine();
+                    ImGui::Text(" Schaltzeit/Sonderfunktionswert %u (%u ms)", (_frame.data[6] << 8) | _frame.data[7], ((_frame.data[6] << 8) | _frame.data[7]) * 10);
+                }
                 break;
             }
             case CMD_CONFIG_ACC:
             {
+                // No official documentation
+                ImGui::SameLine();
+                ImGui::Text(u8"Zubehˆr Konfig");
                 break;
             }
             case CMD_S88_POLL:
             {
+                ImGui::SameLine();
+                if (_frame.resp == 0)
+                    ImGui::Text("S88 Polling 0x%04X Modul Anzahl %d", frame_uid, _frame.data[4]);
+                else
+                    ImGui::Text("S88 Polling 0x%04X Modul %d Zustand %d", frame_uid, _frame.data[4], (_frame.data[5] << 8) | _frame.data[6]);
                 break;
             }
             case CMD_S88_EVENT:
             {
+                int kenner = (_frame.data[0] << 8) | _frame.data[1];
+                int kontakt = (_frame.data[2] << 8) | _frame.data[3];
+                ImGui::SameLine();
+                if (_frame.resp == 0)
+                {
+                    if (_frame.dlc == 4)
+                        ImGui::Text("S88 Event Kennung %d Kontakt %d", kenner, kontakt);
+                    else if (_frame.dlc == 5)
+                        ImGui::Text("S88 Event Kennung %d Kontakt %d Parameter %d", kenner, kontakt, _frame.data[4]);
+                    else if (_frame.dlc == 7)
+                        ImGui::Text("S88 Event Blockmodus Kennung %d Kontakt Start %d Parameter %d", kenner, kontakt, _frame.data[6]);
+                    else
+                        ImGui::Text("S88 Event: Unbekanntes Fomat");
+                }
+                else
+                {
+                    if (_frame.dlc == 8)
+                        ImGui::Text("S88 Event Kennung %d Kontakt %d Zustand alt %d Zustand neu %d Zeit %d", kenner, kontakt, _frame.data[4], _frame.data[5], (_frame.data[6] << 8) | _frame.data[7]);
+                    else
+                        ImGui::Text("S88 Event: Unbekanntes Fomat");
+                }
                 break;
             }
             case CMD_SX1_EVENT:
             {
+                ImGui::SameLine();
+                if (_frame.dlc == 5)
+                    ImGui::Text("SX1 Event UID 0x%08X SX1-Adresse %d", frame_uid, _frame.data[4]);
+                else if (_frame.dlc == 6)
+                    ImGui::Text("SX1 Event UID 0x%08X SX1-Adresse %d Zustand %d", frame_uid, _frame.data[4], _frame.data[5]);
+                else
+                    ImGui::Text("SX1 Event: Unbekanntes Fomat");
                 break;
             }
             case CMD_PING:
@@ -450,6 +570,46 @@ namespace BusMonitor
             }
             case CMD_CONFIG:
             {
+                static int kanal = -1;
+                static int n_messwerte = 0;
+                static int n_kanaele = 0;
+                ImGui::SameLine();
+                if (_frame.dlc == 5) 
+                {
+                    if (_frame.resp == 0)
+                        kanal = _frame.data[4];
+                    ImGui::Text("Statusdaten: UID 0x%08X Index 0x%02X", frame_uid, _frame.data[4]);
+                }
+                else if (_frame.dlc == 6)
+                    ImGui::Text("Statusdaten: UID 0x%08X Index 0x%02X Paketanzahl %d", frame_uid, _frame.data[4], _frame.data[5]);
+                else 
+                {
+                    int paket = (_frame.id & 0xFCFF) - 1;
+                    ImGui::Text("Statusdaten: Paket %d", paket);
+                    if ((kanal == 0) && (paket == 0)) 
+                    {
+                        n_messwerte = _frame.data[0];
+                        n_kanaele = _frame.data[1];
+                        int id = Globals::getUidFromData(_frame.data + 4);
+                        ImGui::SameLine();
+                        ImGui::Text(u8"Anzahl Messwerte: %d Anzahl Kan‰le: %d Ger‰tenummer: 0x%08x", n_messwerte, n_kanaele, id);
+                    }
+                    else
+                    {
+                        char tmp_data[8];
+                        for (int i = 0; i < 8; i++)
+                        {
+                            ImGui::SameLine();
+                            if (!isprint(_frame.data[i]))
+                                tmp_data[i] = ' ';
+                            else
+                                tmp_data[i] = _frame.data[i];
+                        }
+                        ImGui::Text(u8"%c%c%c%c%c%c%c%c", tmp_data[0], tmp_data[1], tmp_data[2], tmp_data[3], tmp_data[4], tmp_data[5], tmp_data[6], tmp_data[7]);
+                    }
+                    if (kanal == (n_messwerte + n_kanaele) && paket > 0)
+                        kanal = -1;
+                }
                 break;
             }
             case CMD_DATA_QUERY:
