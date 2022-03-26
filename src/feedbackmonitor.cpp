@@ -11,26 +11,26 @@
  * MäCAN Control Panel
  * feedbackmonitor.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-17.1]
+ * Commit: [2022-03-27.1]
  */
 
 #include "feedbackmonitor.h"
-#include "imgui.h"
+#include "guihelpers.h"
 
-int m_starting_adress = 1;
+int m_starting_address = 1;
 int m_bus_id = 0;
 bool m_simulate_feedback = false;
 
 bool m_states[16] = { false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
 
-void feedbackButton(bool _state)
+void feedbackButton(bool _state, int _index)
 {
 	if (_state)
 	{
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
 	}
-	ImGui::Button("  ");
+	ImGui::Button(std::to_string(_index).c_str(), ImVec2(30.0f * Globals::ProgramStates::gui_scaling, 30.0f * Globals::ProgramStates::gui_scaling));
 	if (_state) ImGui::PopStyleColor(2);
 }
 
@@ -44,30 +44,50 @@ namespace FeedbackMonitor {
 				ImGui::End();
 				return;
 			}
-			ImGui::InputInt("Anfangsadresse", &m_starting_adress, 16, 16);
-			ImGui::BeginDisabled();
-			ImGui::InputInt("Buskennung", &m_bus_id);
-
 			ImGui::Button(u8"Rückmelder einlesen");
-			ImGui::EndDisabled();
 			ImGui::SameLine();
 			if (ImGui::Button(u8"Zurücksetzen"))
 			{
 				for (int i = 0; i < 16; i++)
 					m_states[i] = false;
 			}
-			ImGui::BeginDisabled();
+			ImGui::SameLine();
 			ImGui::Checkbox(u8"Rückmeldersimulation", &m_simulate_feedback);
-			ImGui::EndDisabled();
+			// ImGui::InputInt("Anfangsadresse", &m_starting_adress, 16, 16);
+			ImGui::Text("Kontakte:");
+			ImGui::SameLine();
+			if (ButtonDisablable(u8"\u25c0##adr", (m_starting_address <= 1)))
+			{
+				m_starting_address -= 16;
+				if (m_starting_address < 1)
+					m_starting_address = 1;
+			}
+			ImGui::SameLine();
+			ImGui::Text("%03d - %03d", m_starting_address, m_starting_address + 15);
+			ImGui::SameLine();
+			if (ButtonDisablable(u8"\u25b6##adr"))
+				m_starting_address += 16;
 
-			if (m_starting_adress < 1) m_starting_adress = 1;
-			if (m_bus_id < 0) m_bus_id = 0;
+			ImGui::Text("Buskennung:");
+			ImGui::SameLine();
+			if (ButtonDisablable(u8"\u25c0##busID", (m_bus_id <= 0)))
+			{
+				m_bus_id -= 1;
+				if (m_bus_id < 0)
+					m_bus_id = 0;
+			}
+			ImGui::SameLine();
+			ImGui::InputText("##busID", (char*)std::to_string(m_bus_id).c_str(), std::to_string(m_bus_id).size() + 1, ImGuiInputTextFlags_ReadOnly);
+			ImGui::Text("%03d", m_bus_id);
+			ImGui::SameLine();
+			if (ButtonDisablable(u8"\u25b6##busID"))
+				m_bus_id += 1;
 
 			ImGui::Separator();
 
 			for (int i = 0; i < 16; i++)
 			{
-				feedbackButton(m_states[i]);
+				feedbackButton(m_states[i], i + m_starting_address);
 				if (i < 15) ImGui::SameLine();
 			}
 			

@@ -11,7 +11,7 @@
  * MäCAN Control Panel
  * gui.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-20.1]
+ * Commit: [2022-03-27.1]
  */
 
 #include "gui.h"
@@ -20,8 +20,9 @@
 #include "feedbackmonitor.h"
 #include "busmonitor.h"
 #include "imgui.h"
+#include <math.h>
 
-#ifdef GLFW_GL3
+#ifdef GLFW
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -37,10 +38,12 @@
 
 #include <sstream>
 #include <queue>
+#ifdef _WIN32
 #include <windows.h>
 #include <shellapi.h>
+#endif
 
-#ifndef GLFW_GL3
+#ifndef GLFW
 #if !SDL_VERSION_ATLEAST(2,0,17)
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
 #endif
@@ -48,7 +51,7 @@
 
 namespace GUI
 {
-#ifdef GLFW_GL3
+#ifdef GLFW
     GLFWwindow* m_window = nullptr;
 #else
     SDL_Renderer* m_renderer = nullptr;
@@ -115,7 +118,7 @@ namespace GUI
         ImGui::EndDisabled();
     }
 
-#ifndef GLFW_GL3
+#ifndef GLFW
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 #else
     static void glfw_error_callback(int error, const char* description)
@@ -125,15 +128,16 @@ namespace GUI
 #endif
 
     void setup(int x_res, int y_res, const char* window_name) {
-
+#ifdef _WIN32
         SetProcessDPIAware();
         m_scaling = (float)GetDeviceCaps(GetDC(NULL), LOGPIXELSX) / 96;
         Globals::ProgramStates::gui_scaling = m_scaling;
+#endif
 
         m_x_res = x_res;
         m_y_res = y_res;
 
-#ifdef GLFW_GL3
+#ifdef GLFW
         glfwSetErrorCallback(glfw_error_callback);
         if (!glfwInit())
             return;
@@ -188,7 +192,7 @@ namespace GUI
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO(); (void)io;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-#ifdef GLFW_GL3
+#ifdef GLFW
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
         io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
 #endif
@@ -197,7 +201,7 @@ namespace GUI
         // Setup Dear ImGui style
         customSytle();
 
-#ifdef GLFW_GL3
+#ifdef GLFW
         // Setup Platform/Renderer backends
         ImGui_ImplGlfw_InitForOpenGL(m_window, true);
         ImGui_ImplOpenGL3_Init(glsl_version);
@@ -209,23 +213,26 @@ namespace GUI
 
         const ImWchar font_ranges[] = { 0x25b2, 0x25b2, // Up arrow
                                         0x25bc, 0x25bc, // Down arrow
+                                        0x25c0, 0x25c0, // Left Arrow
+                                        0x25b6, 0x25b6, // Right Arrow
                                         0x2715, 0x2715, // Cross
                                         0 };
         ImFontConfig font_config;
         font_config.MergeMode = true;
 
+#ifdef _WIN32
         m_font_fallback = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\seguisym.ttf", floor(18.0f * m_scaling));
         m_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\seguisym.ttf", floor(18.0f * m_scaling), &font_config, font_ranges);
         m_bold_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\seguisym.ttf", floor(24.0f * m_scaling));
         m_consolas = ImGui::GetIO().Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\consola.ttf", floor(14.0f * m_scaling));
-
+#endif
         m_status_size.y = floor(30 * m_scaling);
         m_stopgo_size.x = -1;
     }
 
     void poll(bool& _exit)
     {
-#ifdef GLFW_GL3
+#ifdef GLFW
         if (glfwWindowShouldClose(m_window))
             m_exit = true;
         glfwPollEvents();
@@ -256,7 +263,7 @@ namespace GUI
     void newFrame()
     {
         // Start the Dear ImGui frame
-#ifdef GLFW_GL3
+#ifdef GLFW
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
 #else
@@ -265,7 +272,9 @@ namespace GUI
 #endif
         ImGui::NewFrame();
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.0f);
-        //ImGui::PushFont(m_font);
+#ifdef _WIN32
+        ImGui::PushFont(m_font);
+#endif
     }
 
     void render()
@@ -273,11 +282,13 @@ namespace GUI
         // Rendering every loop
 
         ImGui::PopStyleVar();
-        //ImGui::PopFont();
+#ifdef _WIN32
+        ImGui::PopFont();
+#endif
         ImGui::EndFrame();
         ImGui::Render();
 
-#ifdef GLFW_GL3
+#ifdef GLFW
         ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
         int display_w, display_h;
         glfwGetFramebufferSize(m_window, &display_w, &display_h);
@@ -307,7 +318,7 @@ namespace GUI
     void cleanup()
     {
         // Cleanup
-#ifdef GLFW_GL3
+#ifdef GLFW
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
@@ -375,8 +386,8 @@ namespace GUI
             if (!Globals::ProgramStates::tcp_started && !Globals::ProgramStates::tcp_success)
             {
                 if (ImGui::SmallButton("Verbinden")) Globals::ProgramCmds::tcp_connect = true;
+#ifdef _WIN32
                 ImGui::SameLine();
-
                 if (Globals::ProgramStates::tcp_error_code == WSAECONNRESET)
                 {
                     ImGui::Text("Verbindung zum Host verloren. TCP-Code: %d", Globals::ProgramStates::tcp_error_code);
@@ -393,6 +404,7 @@ namespace GUI
                 {
                     ImGui::Text("Nicht verbunden.");
                 }
+#endif
             }
             else if (Globals::ProgramStates::tcp_started && !Globals::ProgramStates::tcp_success)
             {
@@ -465,9 +477,13 @@ namespace GUI
             local_settings.getSettings();
         }
 
+#ifdef _WIN32
         ImGui::PushFont(m_bold_font);
+#endif
         ImGui::Text("Netzwerkeinstellungen");
+#ifdef _WIN32
         ImGui::PopFont();
+#endif
 
         char _IP[16];
         memcpy(_IP, local_settings.tmp_tcp_ip.c_str(), 16);
@@ -478,9 +494,13 @@ namespace GUI
 
         ImGui::Separator();
 
+#ifdef _WIN32
         ImGui::PushFont(m_bold_font);
+#endif
         ImGui::Text("Trace-Einstellungen");
+#ifdef _WIN32
         ImGui::PopFont();
+#endif
         ImGui::Checkbox("Trace anzeigen", &(local_settings.tmp_trace));
         if (ImGui::Combo("Trace-Level", &(local_settings.tmp_trace_level), "Error\0Warnung\0Info\0")) {
 
@@ -511,17 +531,23 @@ namespace GUI
     {
         if (ImGui::Begin("Über MäCAN Control Panel", &m_draw_info, DialogWindowFlag))
         {
+#ifdef _WIN32
             ImGui::PushFont(m_bold_font);
+#endif
             ImGui::Text("MäCAN Control Panel");
+#ifdef _WIN32
             ImGui::PopFont();
+#endif
             ImGui::Text("Version: %s", VERSION);
             ImGui::Text("Commit: %s", COMMIT_CODE);
             ImGui::Text("© 2022 Maximilian Goldschmidt");
+#ifdef _WIN32
             if (ImGui::SmallButton("https://github.com/ixam97"))
                 ShellExecute(0, 0, L"https://github.com/ixam97", 0, 0, SW_SHOW);
             ImGui::SameLine();
             if (ImGui::SmallButton("ixam97@ixam97.de"))
                 ShellExecute(0, 0, L"mailto://ixam97@ixam97.de", 0, 0, SW_SHOW);
+#endif
         }
         ImGui::End();
 

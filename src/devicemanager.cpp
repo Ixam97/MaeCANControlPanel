@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * devicemanager.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-20.1]
+ * Commit: [2022-03-27.1]
  */
 
 #define T_SLIDER 1
@@ -26,6 +26,7 @@
 #include <sstream>
 #include <queue>
 #include <chrono>
+#include <math.h>
 
 uint32_t m_update_uid;
 uint16_t m_update_type;
@@ -40,8 +41,8 @@ namespace DeviceManager
 
     void loop()
     {
-        std::chrono::steady_clock::time_point now_time = std::chrono::high_resolution_clock::now();
-        static std::chrono::steady_clock::time_point last_request_time = now_time;
+        auto now_time = std::chrono::high_resolution_clock::now();
+        static auto last_request_time = now_time;
         std::chrono::duration<double> request_duration = now_time - last_request_time;
 
         // Request readings channel info in regular intervals or if new entry was added to the request list.

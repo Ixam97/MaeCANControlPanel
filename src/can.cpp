@@ -11,13 +11,14 @@
  * M‰CAN Control Panel
  * can.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-17.1]
+ * Commit: [2022-03-27.1]
  */
 
 #include "can.h"
 
 bool CAN::TCPConnect()
 {
+#ifdef _WIN32
     WSADATA wsa;
     m_return_code = WSAStartup(MAKEWORD(2, 0), &wsa);
 
@@ -52,7 +53,6 @@ bool CAN::TCPConnect()
     inet_pton(AF_INET, (PCSTR)m_ip.c_str(), &addr.sin_addr.s_addr);
 
     m_return_code = connect(s, (SOCKADDR*)&addr, sizeof(SOCKADDR));
-
     if (m_return_code == SOCKET_ERROR) 
     {
         int iErrorCode = WSAGetLastError();
@@ -71,10 +71,14 @@ bool CAN::TCPConnect()
     Globals::CanFrame stopFrame(0x00000300, 5, stopData);
     addFrameToQueue(stopFrame, OUTQUEUE);
     return true;
+#else 
+    return false;
+#endif
 }
 
 void CAN::TCPCheckConnection()
 {
+#ifdef _WIN32
     // Check for lost connection
     if (Globals::ProgramStates::tcp_success)
     {
@@ -140,10 +144,12 @@ void CAN::TCPCheckConnection()
             addFrameToQueue(stopFrame, OUTQUEUE);
         }
     }
+#endif
 }
 
 void CAN::TCPDisconnect()
 {
+#ifdef _WIN32
     char datagram[13] = { 0,0,0x03,0x00,5,0,0,0,0,0,0,0,0 };
     m_return_code = send(s, datagram, 13, 0);
     if (m_return_code == SOCKET_ERROR)
@@ -160,7 +166,7 @@ void CAN::TCPDisconnect()
         Globals::ProgramStates::tcp_error_code = 0;
         Globals::logInfo("TCPDisconnect: Disconnected.");
     }
-    
+#endif
 }
 
 int CAN::addFrameToQueue(Globals::CanFrame _frame, bool _b_recframe)
@@ -182,6 +188,7 @@ int CAN::addFrameToQueue(Globals::CanFrame _frame, bool _b_recframe)
 
 int CAN::TCPReadFrame()
 {
+#ifdef _WIN32
     if (Globals::ProgramStates::tcp_success)
     {
         char _buff[13];
@@ -209,13 +216,14 @@ int CAN::TCPReadFrame()
             return frame_count;
         }
     }
-    
+#endif
     return 0;
 }
 
 Globals::CanFrame CAN::processQueue(bool _b_recqueue)
 {
     Globals::CanFrame queuedFrame;
+#ifdef _WIN32
     if (Globals::ProgramStates::tcp_success)
     {
         if (_b_recqueue == INQUEUE)
@@ -235,10 +243,11 @@ Globals::CanFrame CAN::processQueue(bool _b_recqueue)
             {
                 int iErrorCode = WSAGetLastError();
                 Globals::logError("processQueue: Frame could not be sent.", iErrorCode);
-            }                
+            }     
             m_frameOutQueue.pop();
         }
     }
+#endif
     return queuedFrame;
 }
 

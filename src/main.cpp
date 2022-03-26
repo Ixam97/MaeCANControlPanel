@@ -11,7 +11,7 @@
  * M‰CAN Control Panel
  * main.cpp
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-17.1]
+ * Commit: [2022-03-27.1]
  */
 
 #include "globals.h"
@@ -26,7 +26,9 @@
 
 #define CAN_FRAME_TIMEOUT 10 // Timeout in ms
 
+#ifdef _WIN32
 HWND consoleWindow;
+#endif
 
 bool b_exit = false;
 
@@ -35,8 +37,8 @@ void logicLoop()
 
     while (!b_exit || (CAN::getQueueLength(OUTQUEUE) > 0))
     {
-        std::chrono::steady_clock::time_point now_time = std::chrono::high_resolution_clock::now();
-        static std::chrono::steady_clock::time_point last_tcp_check_time = now_time;
+        auto now_time = std::chrono::high_resolution_clock::now();
+        static auto last_tcp_check_time = now_time;
         std::chrono::duration<double> tcp_check_duration = now_time - last_tcp_check_time;
 
         if (tcp_check_duration.count() >= 5 && Globals::ProgramStates::tcp_success)
@@ -65,9 +67,11 @@ void logicLoop()
         // Save settings after they changed
         if (Globals::ProgramSettings::has_changed)
         {
+#ifdef _WIN32
             if (Globals::ProgramSettings::trace) ShowWindow(consoleWindow, SW_SHOW);
 #ifndef _DEBUG
             else ShowWindow(consoleWindow, SW_HIDE);
+#endif
 #endif
             Globals::writeIni();
         }
@@ -119,7 +123,7 @@ void logicLoop()
                 if (newOutFrame.can_hash > 0) BusMonitor::addFrame(newOutFrame);
             }
         }
-        Sleep(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
@@ -127,10 +131,11 @@ void logicLoop()
 int main(int argc, char** argv)
 {
     Globals::loadIni();
-
+#ifdef _WIN32
     consoleWindow = GetConsoleWindow();
 #ifndef _DEBUG
     if (!Globals::ProgramSettings::trace) ShowWindow(consoleWindow, SW_HIDE);
+#endif
 #endif
     GUI::setup(1900, 900, u8"M‰CAN Control Panel");
 

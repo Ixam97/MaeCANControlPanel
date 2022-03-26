@@ -11,15 +11,19 @@
  * M‰CAN Control Panel
  * can.h
  * (c)2022 Maximilian Goldschmidt
- * Commit: [2022-03-17.1]
+ * Commit: [2022-03-27.1]
  */
 
 #pragma once
 #define INQUEUE true
 #define OUTQUEUE false
 
+#ifdef _WIN32
 #include <winsock2.h>
 #include <Ws2tcpip.h>
+#else
+#include <sys/socket.h>
+#endif
 #include <stdint.h>
 #include <queue>
 #include <vector>
@@ -32,8 +36,10 @@ private:
     static inline std::queue<Globals::CanFrame> m_frameOutQueue;
     static inline std::queue<Globals::CanFrame> m_frameInQueue;
     static inline long m_return_code = 0;
+#ifdef _WIN32
     static inline SOCKET s;
     static inline SOCKADDR_IN addr;
+#endif
 
     static inline std::string m_ip = "";
     static inline int m_port = 0;
